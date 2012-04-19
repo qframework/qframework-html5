@@ -232,8 +232,9 @@ AnimFactory.prototype.animObject = function(animid,objectid,data, delaydata,call
 		return;
 	}
 	
-	var item = this.mApp.mObjectsFact.mItems[objectid];
-	var ref = item.mModelRef;
+	//var item = this.mApp.mObjectsFact.mItems[objectid];
+	//var ref = item.mModelRef;
+    var ref= this.mApp.objects().getRef(objectid);
 	
 	var intdata = [0,0];
 	var count = ServerkoParse.parseIntArray(intdata, delaydata);

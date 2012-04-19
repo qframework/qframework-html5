@@ -27,7 +27,11 @@ function ItemFactory( app)
 	this.mModels = {};
 
 	this.mWorld = app.mWorld;
+	this.mDefaultTransf = [0.0,0.0,0.0,1.0, 1.0,1.0, 0.0,0.0,0.0];
 
+	this.mDefaultUv = [0.0,0.0,1.0,1.0];
+	this.mDefaultColors = new Array();
+    this.mDefaultColors[0] = [0xFFFFFFFF];
 }
 
 ItemFactory.prototype.create = function()
@@ -99,6 +103,12 @@ ItemFactory.prototype.newFromTemplate = function(strType, strData) {
 }
 
 ItemFactory.prototype.getFromTemplate = function(strType, strData) {
+
+    if (this.mModels[strData] != undefined)
+    {
+        return this.mModels[strData];
+    }
+    
 	var model = new GameonModel(strData , this.mApp);
 	if (strData == "cube")
 	{
@@ -221,8 +231,13 @@ ItemFactory.prototype.setSubmodels = function(strType, strData) {
 
 ItemFactory.prototype.createFromType = function(template, color, texture) 
 {
-	var model = new GameonModel("template" , this.mApp);
+    var model = new GameonModel("template" , this.mApp);
+    this.addModelFromType(model, template, color, texture);
+    return model;
+}
 
+ItemFactory.prototype.addModelFromType = function(model, template, color, texture) 
+{
 	if (template == GameonModelData_Type.SFIGURE)
 	{
 		model.createModel(GameonModelData_Type.CYLINDER, TextureFactory.mTextureDefault);
@@ -304,4 +319,135 @@ ItemFactory.prototype.processObject = function( objData) {
 		
 	this.createModel(name,"");
 
+}
+
+ItemFactory.prototype.newEmpty = function(name) 
+{
+    var model = new GameonModel(name , this.mApp);
+    model.mIsModel = true;
+    if (model != undefined)
+    {
+        this.mModels[name] = model;
+    }
+}
+
+ItemFactory.prototype.addShape = function(name, type, transform, colors, uvbounds) 
+{
+    var model = this.mModels[name];
+    if (model == undefined) {
+        return;
+    }
+
+    var transf;
+    var uvb;
+    var cols;
+    
+    if (transform != undefined)
+    {
+        transf = new Array(9);
+        for (var a=0; a< 9; a++)
+        {
+            transf[a] = this.mDefaultTransf[a];
+        }
+        
+        ServerkoParse.parseFloatArray(transf,  transform);
+    }
+    else
+    {
+        transf = this.mDefaultTransf;
+    }
+    
+
+    var mat = new Array(16);
+    GMath.matrixIdentity(mat);
+    GMath.matrixTranslate(mat, transf[0],transf[1],transf[2]);
+    GMath.matrixRotate(mat,transf[6], 1, 0, 0);
+    GMath.matrixRotate(mat,transf[7], 0, 1, 0);
+    GMath.matrixRotate(mat,transf[8], 0, 0, 1);
+    GMath.matrixScale(mat, transf[3],transf[4],transf[5]);		
+    
+    
+    if (uvbounds != undefined)
+    {
+        uvb = new Array(6);
+        ServerkoParse.parseFloatArray(uvb , uvbounds);
+    }
+    else
+    {
+        uvb = this.mDefaultUv;
+    }
+
+    if (colors != undefined)
+    {
+        cols = ServerkoParse.parseColorVector(colors);
+    }else
+    {
+        cols = this.mDefaultColors;
+    }
+    
+    
+    if (type == "plane")
+    {
+        model.addPlane(mat, cols, uvb);
+    }
+    /*
+    else if (type.equals("cube"))
+    {
+        model.addCube(bounds, cols, uvb);
+    }else if (type.equals("cylinder"))
+    {
+        model.addCyl(bounds, cols, uvb);
+    }else if (type.equals("sphere"))
+    {
+        model.addSphere(bounds, cols, uvb);
+    }else if (type.equals("pyramid"))
+    {
+        model.addPyramid(bounds, cols, uvb);
+    }*/
+    
+}
+
+ItemFactory.prototype.addShapeFromData = function(name, data, transform, uvbounds) 
+{
+    var model = mModels.get[name];
+    if (model == undefined) {
+        return;
+    }
+
+    var transf;
+    var uvb;
+    var cols;
+    
+    if (transform != undefined)
+    {
+        transf = new Array(9);
+        ServerkoParse.parseFloatArray(transf,  transform);
+    }
+    else
+    {
+        transf = this.mDefaultTransf;
+    }
+    
+    if (uvbounds != undefined)
+    {
+        uvb = new Array(6);
+        ServerkoParse.parseFloatArray(uvb , uvbounds);
+    }
+    else
+    {
+        uvb = this.mDefaultUv;
+    }
+
+    
+    var mat = new Array(16);
+    
+    GMath.matrixIdentity(mat);
+    GMath.matrixTranslate(mat, transf[0],transf[1],transf[2]);
+    GMath.matrixRotate(mat,transf[6], 1, 0, 0);
+    GMath.matrixRotate(mat,transf[7], 0, 1, 0);
+    GMath.matrixRotate(mat,transf[8], 0, 0, 1);
+    GMath.matrixScale(mat, transf[3],transf[4],transf[5]);		
+    
+    var inputdata = ServerkoParse.parseFloatVector(data);
+    model.createModelFromData(inputdata, mat, uvb);
 }

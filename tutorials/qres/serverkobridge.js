@@ -47,6 +47,11 @@ function Serverko()
 		}
 		
 		var str = "";
+		if (this.databuffer.length >  0)
+		{
+			if ( this.databuffer[ this.databuffer.length -1 ].length != 0)
+				str += ",";
+		}
 		
 		str += "{\"res\":\"event\",\"id\":\""+id+"\",\"type\":\""+area;
         
@@ -67,6 +72,12 @@ function Serverko()
 	{
 		this.startData();
 		var str = "";
+		if (this.databuffer.length >  0)
+		{
+			if ( this.databuffer[ this.databuffer.length -1 ].length != 0)
+				str += ",";
+		}
+		
 		str += "{\"res\":\"event\",\"id\":\""+id+"\",\"type\":\""+area;
         
         if (data != undefined)
@@ -93,22 +104,15 @@ function Serverko()
 			while (arr.length > 0)
 			{
 				data += arr.shift();
-	            if (arr.length > 0)
-	            {
-	                data += ",";
-	            }
-				
 			}
 			
-			if (data.length > 0)
-			{
 			this.sendbuffer.push( "{\"gs\":{\"room\":[" + data  + "]}}\r\n"  );
 		}
-	}
 	}
 
 	this.clientStartData = 	function (userID)
 	{
+		this.lastLen = 0;
 		// just in case of recursion , is 300 decent number? it was for spartans..
 		if (this.clientbuffer.length >  300)
 		{
@@ -122,6 +126,11 @@ function Serverko()
 	{
 		var str = "";
 		
+		//clientbuffer[ clientbuffer.length -1 ] += "<room><res>event</res><id>"+id+"</id><type>"+area+"</type><data>"+data+"</data></room>";
+        if ( this.clientbuffer[ this.clientbuffer.length -1 ].length != 0)
+        	str += ",";
+
+        
         str += "{\"res\":\"event\",\"id\":\""+id+"\",\"type\":\""+area+"\",\"data\":\""+data+"\"}";
         if (data2 != undefined)
         	str += "\",\"data2\":\""+data2;
@@ -138,6 +147,11 @@ function Serverko()
 		this.clientStartData(userID);
 		var str = "";
 		
+		//clientbuffer[ clientbuffer.length -1 ] += "<room><res>event</res><id>"+id+"</id><type>"+area+"</type><data>"+data+"</data></room>";
+        if ( this.clientbuffer[ this.clientbuffer.length -1 ].length != 0)
+        	str += ",";
+
+        
         str += "{\"res\":\"event\",\"id\":\""+id+"\",\"type\":\""+area+"\",\"data\":\""+data+"\"}";
         if (data2 != undefined)
         	str += "\",\"data2\":\""+data2;
@@ -159,15 +173,9 @@ function Serverko()
 			while (arr.length > 0)
 			{
 				data += arr.shift();
-	            if (arr.length > 0)
-	            {
-	                data += ",";
-	            }				
 			}
-			if (data.length > 0)
-			{
+			
 			this.sendbuffer.push( "{\"gs\":{\"room\":[" + data  + "]}}\r\n"  );
-		}
 		}
 
 	}
@@ -249,7 +257,7 @@ function Serverko()
 	}
     this.sendEvent = function (id, delay, data) 
     {
-        this.appendEvent( 100 , delay , "Q_handlers_script_onEvent(" + id + ","  + "'" + data + "'" + ");"  );
+        this.appendEvent( 100 , delay , "Q.handlers.script_onEvent(" + id + ","  + "'" + data + "'" + ");"  );
     }
     this.clientSpectate = function (userID , yesno)
 	{
@@ -272,10 +280,7 @@ function Serverko()
 	{
 		arr = this.databuffer[ this.databuffer.length -1 ];
 		str = arr.pop();
-		if (str.length > 0)
-		{		
 		this.clientbuffer[ this.clientbuffer.length -1 ].push(str)
-		}
 		return this;
 	}
 	
@@ -283,10 +288,8 @@ function Serverko()
 	{
 		arr = this.databuffer[ this.databuffer.length -1 ];
 		str = arr.pop();
-		if (str.length > 0)
-		{
+
 		this.sendbuffer.push( "{\"gs\":{\"room\":[" + str + "]}}\r\n"  );
-		}
 		return this;
 	}	
 
@@ -294,11 +297,9 @@ function Serverko()
 	{
 		arr = this.databuffer[ this.databuffer.length -1 ];
 		str = arr.pop();
-		if (str.length > 0)
-		{
+		
 		//console.log ( "now " +  this.lastData  + this.databuffer.length)
 		this.sendbuffer.push( "{\"gs\":{\"room\":[" + str + "]}}\r\n"  );
-		}
 		//console.log ( "afternow " +  this.databuffer)
 		return this;
 	}

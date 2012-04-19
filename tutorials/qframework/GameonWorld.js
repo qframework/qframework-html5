@@ -59,7 +59,7 @@ GameonWorld.prototype.initSplash = function(gl , name)
 	model.mEnabled = true;		
 }
 
-GameonWorld.prototype.add = function(model, gl)
+GameonWorld.prototype.add = function(model)
 {
 	if (model.isValid())
 	{	
@@ -69,7 +69,7 @@ GameonWorld.prototype.add = function(model, gl)
 			console.error(" model alerady in ");
 		}
 		this.mNewModels.push(model);
-		//model.generate(gl);
+		model.generate();
 	}
 
 }
@@ -103,7 +103,7 @@ GameonWorld.prototype.addModels = function(gl)
 			{
 				console.error(" model alerady in 1");
 			}		
-			model.generate(gl);
+			model.generate();
 			this.mModelList2.push(model);				
 		}else
 		{
@@ -112,7 +112,7 @@ GameonWorld.prototype.addModels = function(gl)
 			{
 				console.error(" model alerady in 2");
 			}				
-			model.generate(gl);
+			model.generate();
 			this.mModelList.push(model);
 		}
 		/*

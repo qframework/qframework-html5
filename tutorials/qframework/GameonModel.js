@@ -63,9 +63,24 @@ function GameonModel(name , app)
     this.mColorOffset = 0;
 	this.mGenerated = false;
 	this.mActive = true;
+    
+    //
+    
 	
 }
 
+GameonModel.mStaticBoundsPlane = [ 
+		-0.5,-0.5,0.0,1.0,
+		0.5,-0.5,0.0,1.0,
+		-0.5,0.5,0.0,1.0,
+		 0.5,0.5,0.0,1.0 ];
+	
+GameonModel.mStaticBounds =  [ 
+		0.0,0.0,0.0,1.0,
+		0.0,0.0,0.0,1.0,
+		0.0,0.0,0.0,1.0,
+		0.0,0.0,0.0,1.0 ];	
+        
 // inheritance
 GameonModel.inheritsFrom( GLModel);
 
@@ -870,3 +885,136 @@ GameonModel.prototype.setActive = function(active)
 {
 	this.mActive = active;
 }
+
+
+GameonModel.prototype.createModelFromData = function(inputdata, mat , uvb)
+{
+    var umid = (uvb[1] + uvb[0]) /2;
+    var vmid = (uvb[3] + uvb[2]) /2;
+    var ratiou = uvb[1] - uvb[0];
+    var ratiov = uvb[3] - uvb[2];
+    
+    var outvec = [ 0 ,0,0,1];
+    var cols = [0,0,0,0];
+    var tu,tv;
+    
+    // model info - vertex offset?
+    var len = inputdata.length;
+    //  v   c   uv
+    // (3 + 4 + 2) * 3
+    var off;
+    var shape = new GLShape(this);
+    
+    for (var a=0; a< len; a+= 27 ) 
+    {
+        off = a;
+        
+        GMath.matrixVecMultiply2(mat, inputdata, off , outvec ,0);
+        cols[0] = inputdata[off+3];
+        cols[1] = inputdata[off+4];
+        cols[2] = inputdata[off+5];
+        cols[4] = inputdata[off+6];
+        tu = inputdata[off+7] * ratiou + umid;
+        tv  = inputdata[off+8] * ratiou + umid;
+        var v1 = shape.addVertexColor(outvec[0], outvec[1], outvec[2] , tu, tv, cols);
+
+        off += 9;
+        GMath.matrixVecMultiply2(mat, inputdata, off , outvec ,0);
+        cols[0] = inputdata[off+3];
+        cols[1] = inputdata[off+4];
+        cols[2] = inputdata[off+5];
+        cols[4] = inputdata[off+6];
+        tu = inputdata[off+7] * ratiou + umid;
+        tv  = inputdata[off+8] * ratiou + umid;
+        var v2 = shape.addVertexColor(outvec[0], outvec[1], outvec[2] , tu, tv, cols);
+        
+        off += 9;
+        GMath.matrixVecMultiply2(mat, inputdata, off , outvec ,0);
+        cols[0] = inputdata[off+3];
+        cols[1] = inputdata[off+4];
+        cols[2] = inputdata[off+5];
+        cols[4] = inputdata[off+6];
+        tu = inputdata[off+7] * ratiou + umid;
+        tv  = inputdata[off+8] * ratiou + umid;
+        var v3 = shape.addVertexColor(outvec[0], outvec[1], outvec[2] , tu, tv, cols);
+        
+        shape.addFace( new GLFace(v1,v2,v3));
+
+    }
+
+    this.addShape(shape);
+    this.mTextureID = this.mApp.textures().get(TextureFactory_Type.DEFAULT);
+}
+
+
+GameonModel.prototype.addPlane = function(mat, cols, uvb) 
+{
+    /*
+    var umid = (uvb[2] + uvb[0]) /2;
+    var vmid = (uvb[3] + uvb[1]) /2;
+    var ratiou = uvb[2] - uvb[0];
+    var ratiov = uvb[3] - uvb[1];
+*/
+    var ulow = uvb[0];
+    var uhigh =uvb[2];
+    var vlow = uvb[1];
+    var vhigh =uvb[3];
+    
+    var shape = new GLShape(this);
+    GMath.matrixVecMultiply2(mat, GameonModel.mStaticBoundsPlane, 0 ,  GameonModel.mStaticBounds,0);
+    GMath.matrixVecMultiply2(mat, GameonModel.mStaticBoundsPlane, 4 ,  GameonModel.mStaticBounds,4);
+    GMath.matrixVecMultiply2(mat, GameonModel.mStaticBoundsPlane, 8 ,  GameonModel.mStaticBounds,8);
+    GMath.matrixVecMultiply2(mat, GameonModel.mStaticBoundsPlane, 12 ,  GameonModel.mStaticBounds,12);
+    
+    var count = 0;
+    var leftBottomFront = shape.addVertexColorInt( GameonModel.mStaticBounds[0],  GameonModel.mStaticBounds[1],  GameonModel.mStaticBounds[2], ulow , vhigh, cols[count]);
+    count++; if (count >= cols.length) count = 0;
+    var rightBottomFront = shape.addVertexColorInt( GameonModel.mStaticBounds[4],  GameonModel.mStaticBounds[5],  GameonModel.mStaticBounds[6], uhigh , vhigh, cols[count]);
+    count++; if (count >= cols.length) count = 0;
+    var leftTopFront = shape.addVertexColorInt( GameonModel.mStaticBounds[8],  GameonModel.mStaticBounds[9],  GameonModel.mStaticBounds[10] , ulow , vlow, cols[count]);
+    count++; if (count >= cols.length) count = 0;
+    var rightTopFront = shape.addVertexColorInt( GameonModel.mStaticBounds[12],  GameonModel.mStaticBounds[13],  GameonModel.mStaticBounds[14] , uhigh , vlow, cols[count]);
+    count++; if (count >= cols.length) count = 0;
+    // front
+    shape.addFace(new GLFace(leftBottomFront, rightTopFront , leftTopFront));
+    shape.addFace(new GLFace(leftBottomFront, rightBottomFront , rightTopFront ));
+
+    this.addShape(shape);		
+    
+}
+
+GameonModel.prototype.copyOfModel = function() 
+{
+    var model = new GameonModel(this.mName, this.mApp);
+    model.mEnabled = this.mEnabled;
+    model.mForceHalfTexturing = false;
+    model.mForcedOwner = 0;
+    model.mShapeList = this.mShapeList;	
+    model.mVertexList = this.mVertexList;
+    model.mVertexOffset = this.mVertexOffset;
+    model.mTextureID = this.mTextureID;
+    model.mIndexCount = this.mIndexCount;
+    
+    model.mForcedOwner = this.mForcedOwner;
+    model.mTextureW = this.mTextureW;
+    model.mTextureH = this.mTextureH;
+    return model;
+}
+
+GameonModel.prototype.getRef = function(count) 
+{
+    if (count < this.mRefs.length)
+    {
+        return this.mRefs[count];
+    } else {
+        while (count >= this.mRefs.length)
+        {
+            var ref = new GameonModelRef(this);
+            this.mRefs.push(ref);
+        }
+        return this.mRefs[count];
+    }
+}
+
+
+

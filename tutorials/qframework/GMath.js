@@ -299,6 +299,97 @@ GMath.lookAt = function(matrix, eyePosition3D, center3D, upVector3D)
    GMath.matrixTranslate(matrix,-eyePosition3D[0], -eyePosition3D[1], -eyePosition3D[2]);
 }    
 
+GMath.matrixRotate = function(m, angle, x, y, z)
+{
+    
+  angle *= (Math.PI / 180.0);
+
+  var c = Math.cos(angle);
+  var s = Math.sin(angle);
+  var _c = 1.0 - c;
+
+  var v = [0,0,0,0];
+  v[0] = x; v[1] = y; v[2] = z;
+  GMath.normalizeVector(v);
+  x = v[0]; y = v[1]; z = v[2];
+
+  var mat = new Array(16);
+
+  mat[0] = x * x * _c + c;
+  mat[4] = x * y * _c - z * s;
+  mat[8] = x * z * _c + y * s;
+  mat[12] = 0.0;
+
+  mat[1] = y * x * _c + z * s;
+  mat[5] = y * y * _c + c;
+  mat[9] = y * z * _c - x * s;
+  mat[13] = 0.0;
+
+  mat[2] = z * x * _c - y * s;
+  mat[6] = z * y * _c + x * s;
+  mat[10] = z * z * _c + c;
+  mat[14] = 0.0;
+
+  mat[3] = 0.0;
+  mat[7] = 0.0;
+  mat[11] = 0.0;
+  mat[15] = 1.0;
+
+  var res = new Array(16);
+  GMath.matricesMultiply(mat, m, res);
+  for (var a=0; a< 16; a++)
+  {
+    m[a] = res[a];
+  }
+    
+}
+
+GMath.matrixTranslate = function(m, x, y, z)
+{
+    
+    var transl = [ 1,0,0,0, 0,1,0,0, 0,0,1,0, x,y,z,1];
+    //__gluMakeIdentityf(transl);
+    var A = new Array(16);
+    for (var a=0; a< 16;a++)
+    {
+        A[a] = m[a];
+    }
+
+    GMath.matricesMultiply(transl , A, m);
+    /*
+    m[12] += x;
+    m[13] += y;
+    m[14] += z;
+    int n=0;
+    */
+}
+
+GMath.matrixScale = function(m, x, y, z)
+{
+    
+    var scale = [ x,0,0,0, 0,y,0,0, 0,0,z,0, 0,0,0,1];
+    var A = new Array(16);
+    for (var a=0; a< 16;a++)
+    {
+        A[a] = m[a];
+    }
+
+    GMath.matricesMultiply(scale , A, m);
+    /*
+    m[0] *= x;
+    m[5] *= y;
+    m[10] *= z;
+    */
+}
+
+
+GMath.matrixIdentity = function(m)
+{
+    for (var a=0; a< 16; a++)
+    {
+        m[a] = GMath.mIdentity[a];
+    }
+}
 
 GMath.matrixNullify = function(m)
 {

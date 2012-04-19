@@ -17,6 +17,13 @@
    Should be used for peace, not war :)   
 */
 
+function ObjectsFactory_RefId()
+{
+    var name = undefined;
+	var id = -1;
+}
+
+
 function ObjectsFactory(app)
 {
 	this.mApp = app;
@@ -69,85 +76,104 @@ ObjectsFactory.prototype.create = function(name, data)
 	var model = this.mApp.mItems.getFromTemplate(name,data);
 	if (model != undefined)
 	{
+        var modelnew = model.copyOfModel();
 		var item = new LayoutItem(this.mApp);
-		item.mModel = model;
+		item.mModel = modelnew;
 		this.addModel(name,item);
 	}
 }	
 
 ObjectsFactory.prototype.place = function(name, data) 
 {
-	var item = this.mItems[name];
+    var refid = this.refId(name);
+    
+	var item = this.mItems[refid.name];
 	if (item == undefined)
 	{
 		return;
 	}
 	var model = item.mModel;
 
-	// TODO submodels
-	if (model.mRefs.length == 0)
-	{
-		var ref = new GameonModelRef(model);
-		model.addref(ref);
-		item.mModelRef = ref;
-	}
-	// parse loc
-	var tok = data.split(",");
-	var x =0 ,y =0 ,z =0 ;
-	
-	if (data.length > 0)x = parseFloat(tok[0]);
-	if (data.length > 1)y = parseFloat(tok[1]);
-	if (data.length > 2)z = parseFloat(tok[2]);
-	item.setPosition2(x,y,z);
+    var coords = new Array(3);
+    ServerkoParse.parseFloatArray(coords, data);
+
+    var ref = model.getRef(refid.id);
+    ref.setPosition(coords);
+    ref.set();
 
 }
 
 ObjectsFactory.prototype.scale = function(name, data) 
 {
-	var item = this.mItems[name];
+    var refid = this.refId(name);
+    
+	var item = this.mItems[refid.name];
 	if (item == undefined)
 	{
 		return;
 	}
 	var model = item.mModel;
 
-	
-	// TODO submodels
-	if (model.mRefs.length == 0)
-	{
-		var ref = new GameonModelRef(model);
-		model.addref(ref);
-	}
-	// parse loc
-	var tok = data.split(",");
-	var x =0 ,y =0 ,z =0 ;
-	
-	if (data.length > 0)x = parseFloat(tok[0]);
-	if (data.length > 1)y = parseFloat(tok[1]);
-	if (data.length > 2)z = parseFloat(tok[2]);
-	var r = model.ref(0);
-	r.setScale(x, y, z);
-	r.set();
+    var coords = new Array(3);
+    ServerkoParse.parseFloatArray(coords, data);
+
+    var ref = model.getRef(refid.id);
+    ref.setScale(coords);
+    ref.set();
 }
 
-ObjectsFactory.prototype.texture = function(name, data) 
+ObjectsFactory.prototype.rotate = function(name, data) 
 {
-	var item = this.mItems[name];
+    var refid = this.refId(name);
+    
+	var item = this.mItems[refid.name];
+	if (item == undefined)
+	{
+		return;
+	}
+	var model = item.mModel;
+
+    var coords = new Array(3);
+    ServerkoParse.parseFloatArray(coords, data);
+
+    var ref = model.getRef(refid.id);
+    ref.setRotate(coords);
+    ref.set();
+}
+
+
+ObjectsFactory.prototype.texture = function(name, data , submodel) 
+{
+    var refid = this.refId(name);
+	var item = this.mItems[refid.name];
 	if (item == undefined)
 	{
 		return;
 	}
 	
 	var model = item.mModel;
-	
-	var text = this.mApp.mTextures.getTexture(data);
-	model.setTexture(text);
+	var r = model.ref(refid.id);
+    
+    if (data != undefined && data.length > 0)
+    {
+        var text = this.mApp.mTextures.getTexture(data);
+        model.setTexture(text);
+    }
+    if (submodel != undefined && submodel.length > 0)
+    {
+        var arr = new Array(2);
+        ServerkoParse.parseIntArray(arr,submodel);
+        r.setOwner(arr[0] , arr[1]);
+    }
+     
 }
 //TODO mutliple references with name.refid , default 0!
 
 ObjectsFactory.prototype.state = function(name, data) 
 {
-	var item = this.mItems[name];
+    var refid = this.refId(name);
+	var item = this.mItems[refid.name];
+
 	if (item == undefined)
 	{
 		return;
@@ -165,7 +191,7 @@ ObjectsFactory.prototype.state = function(name, data)
 		this.place(name, "0,0,0");
 	}
 	
-	model.ref(0).setVisible(visible);
+	model.ref(refid.id).setVisible(visible);
 	model.setVisible(visible);
 }
 
@@ -215,7 +241,7 @@ ObjectsFactory.prototype.processObject = function( objData) {
 	if (objData["texture"] != undefined)
 	{	        
 		var data = objData["texture"];    
-		this.texture(name, data);
+		this.texture(name, data , "" );
 	}
 	
 	if (objData["state"] != undefined)
@@ -223,6 +249,39 @@ ObjectsFactory.prototype.processObject = function( objData) {
 		var data = objData["state"];    
 		this.state(name, data);
 	}	
-
 }
 
+ObjectsFactory.prototype.refId = function(name)
+{
+    var refdata = new ObjectsFactory_RefId();
+    
+    var i = name.indexOf('.'); 
+    if ( i > 0)
+    {
+        
+        refdata.name = name.substr(0, i);
+        var refid = name.substr(i+1, name.length);
+        refdata.id = parseInt(refid);
+    }else
+    {
+        refdata.name = name;
+        refdata.id = 0;
+    }
+    return refdata;
+}
+
+
+ObjectsFactory.prototype.getRef = function(name)
+{
+    var refid = this.refId(name);
+    var item = this.mItems[refid.name];
+    if (item == undefined)
+    {
+        return undefined;
+    }
+    
+    var model = item.mModel;
+    var ref = model.getRef(refid.id);
+    return ref;
+    
+}    

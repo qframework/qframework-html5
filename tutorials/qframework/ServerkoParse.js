@@ -226,7 +226,7 @@ function q_getScript(url)
 			  this.readyState == "loaded" || this.readyState == "complete") ) {
 		   done = true;
 		   // Handle memory leak in IE
-		   script.onload = script.onreadystatechange = null;
+		   script.onload = script.onreadystatechange = undefined;
 		   //console.log("lock unset");
 		   GameonApp.lock = false;
 		}
@@ -246,7 +246,7 @@ function q_onLoadScript(req)
 	{
 		var req = q_script_reqs.shift();
 		q_req_working = True;
-		req.send(null);
+		req.send(undefined);
 	}
 	
 }
@@ -470,3 +470,111 @@ ServerkoParse.parseIntArray = function(array,data)
 
 	return count;
 }
+
+ServerkoParse.parseFloatData = function(outdata, data , offsets) 
+{
+
+    var val = 0;
+    var arrcount = 0;
+    var offsetcount = 0;
+    var array = undefined;
+    var currsize = 0;
+    var tok = data.split(",");
+	for (var a=0; a< tok.length ; a++)
+    {
+        if (arrcount == 0)
+        {
+            currsize = offsets[offsetcount++];
+            offsetcount = offsetcount % offsets.length;
+            array = new Array(currsize);
+        }
+        val= parseFloat(tok[a]);
+        array[arrcount++] = val;
+        if (arrcount >= currsize)
+        {
+            outdata.push(array);
+            arrcount = 0;
+        }
+    }
+    return outdata.size();
+}
+
+ServerkoParse.parseIntData = function(outdata, data , offsets) 
+{
+    var val = 0;
+    var arrcount = 0;
+    var offsetcount = 0;
+    var array = undefined;
+    var currsize = 0;
+    
+    var tok = data.split(",");
+    for (var a=0; a< tok.length ; a++)
+    {
+        if (arrcount == 0)
+        {
+            currsize = offsets[offsetcount++];
+            offsetcount = offsetcount % offsets.length;
+            array = new Array(currsize);
+        }
+        val= parseInt(tok[a]);
+        array[arrcount++] = val;
+        if (arrcount >= currsize)
+        {
+            outdata.push(array);
+            arrcount = 0;
+        }
+    }
+    return outdata.size();
+}
+
+ServerkoParse.parseIntVector = function(data)
+{
+    var val = 0;
+    var array = new Array(len);
+    var count = 0;
+    
+    var tok = data.split(",");
+    var len = tok.length;
+    
+    for (var a=0; a< tok.length ; a++)
+    {
+        val= parseInt(tok[a]);
+        array[count++] = val;
+    }
+    
+    return array;
+}
+
+ServerkoParse.parseColorVector = function(data)
+{
+    var val = 0;
+    var tok = data.split(",");
+    var len = tok.length;
+    var array = new Array(len);
+    var count = 0;
+    
+    for (var a=0; a< tok.length ; a++)
+    {
+        val= ColorFactory.getColorVal(tok[a]);
+        array[count++] = val;
+    }
+    
+    return array;
+}
+
+ServerkoParse.parseFloatVector = function(data)
+{
+    var val = 0;
+    var tok = data.split(",");
+    var len = tok.length;
+    var array = new Array(len);
+    var count = 0;
+    for (var a=0; a< tok.length ; a++)
+    {
+        val= parseFloat(tok[a]);
+        array[count++] = val;
+    }
+    
+    return array;
+}
+

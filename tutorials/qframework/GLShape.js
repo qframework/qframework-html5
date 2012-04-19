@@ -83,3 +83,69 @@ GLShape.prototype.addVertex = function(x, y, z, tu, tv, color)
 	this.mVertexList.push(vertex);
 	return vertex;
 }
+
+GLShape.prototype.addVertexColor = function(x, y, z, tu, tv, color) 
+{
+    var red = color[1];
+    var green = color[2];
+    var blue = color[3];
+    var alpha = color[0];
+    
+    for (var i = 0; i < this.mVertexList.length; i++)
+	{
+		var vertex = this.mVertexList[i];
+		if (vertex.x == x && vertex.y == y && vertex.z == z &&
+			vertex.tu == tu && vertex.tv == tv && 
+			vertex.red== red &&
+			vertex.green== green &&
+			vertex.blue== blue &&
+			vertex.alpha== alpha)  
+		{
+			return vertex;
+		}
+	}
+    
+    var vertex = this.mWorld.addVertex(x, y, z, tu, tv);
+	
+	vertex.red= red;
+	vertex.green= green;
+	vertex.blue= blue;
+	vertex.alpha= alpha;
+
+	this.mVertexList.push(vertex);
+	return vertex;
+
+}
+
+
+GLShape.prototype.addVertexColorInt = function(x, y, z, tu, tv, color) 
+{
+    var red = ColorFactory.decodeR(color) / 255.0;
+    var green = ColorFactory.decodeG(color) / 255.0;
+    var blue = ColorFactory.decodeB(color) / 255.0;
+    var alpha = ColorFactory.decodeA(color) / 255.0;
+
+	for (var i = 0; i < this.mVertexList.length; i++)
+	{
+		var vertex = this.mVertexList[i];
+		if (vertex.x == x && vertex.y == y && vertex.z == z &&
+			vertex.tu == tu && vertex.tv == tv && 
+			vertex.red== red &&
+			vertex.green== green &&
+			vertex.blue== blue &&
+			vertex.alpha== alpha)  
+		{
+			return vertex;
+		}
+	}
+    
+	var vertex = this.mWorld.addVertex(x, y, z, tu, tv);
+	
+	vertex.red= red;
+	vertex.green= green;
+	vertex.blue= blue;
+	vertex.alpha= alpha;
+
+	this.mVertexList.push(vertex);
+	return vertex;
+}

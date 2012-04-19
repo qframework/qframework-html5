@@ -319,18 +319,18 @@ LayoutAreaTable.prototype.createCustomModel = function()
 			fcolor = this.mApp.colors().white;//getPlayerColor(owner);
 		}
 		
-		var div = this.mSizeH / this.mSize;
+		var div = this.mSizeW / this.mSize;
 		var ref = new GameonModelRef(undefined);
 		ref.mLoc = this.mDisplay;
-		var scrollpos = this.mScrollers[0] / (this.mScrollers[2]-this.mScrollers[1]);
+		var scrollpos = this.mScrollers[0] *div * 2;
 		if (this.mSubType == LayoutAreaTable_SubType.LIST)
 		{
-			model.createPlane( 0.40, -div/2, 0.01 ,  0.5,div/2 , 0.01, fcolor);
+			model.createPlane( 0.43, -div/2, 0.01 ,  0.5,div/2 , 0.01, fcolor);
 			ref.setPosition(0.0, - scrollpos * this.mBounds[1], 0.001);
 		}else
 		{
-			model.createPlane(  -div/2, 0.40,0.01 ,  div/2 , 0.5, 0.01, fcolor);
-			ref.setPosition( - scrollpos * this.mBounds[0], 0.0,0.001);
+			model.createPlane(  -div/2, 0.43,0.01 ,  div/2 , 0.5, 0.01, fcolor);
+			ref.setPosition( scrollpos * this.mBounds[0], 0.0,0.001);
 			
 		}
 		
@@ -357,8 +357,8 @@ LayoutAreaTable.prototype.createCustomModel = function()
 LayoutAreaTable.prototype.createDefaultFields = function()
 {
 	var div = this.mSizeW / this.mSize;
-	this.mScrollers[1] = -0.5 + div/3;
-	this.mScrollers[2] = 0.5 - div/3;
+	this.mScrollers[1] = -0.5 + div/2;
+	this.mScrollers[2] = 0.5 - div/2;
 	if (this.mScrollers[0] < this.mScrollers[1])
 	{
 		this.mScrollers[0] = this.mScrollers[1];
@@ -508,8 +508,8 @@ LayoutAreaTable.prototype.updateScrollers = function()
 		this.mModel.setActive(true);
 		this.mModel.setState(LayoutArea_State.VISIBLE);
 		var ref = this.mModel.ref(0);
-		var div = this.mSizeH / this.mSize;
-		var scrollpos = this.mScrollers[0] / (this.mScrollers[2]-this.mScrollers[1]+div);
+		var div = this.mSizeW / this.mSize;
+		var scrollpos = this.mScrollers[0];
 		if (this.mHasScrollV)
 		{
 			ref.setPosition(0.0, -scrollpos*this.mBounds[1], 0.001);

@@ -84,6 +84,35 @@ ColorFactory.prototype.getColor = function(value) {
 	
 }
 
+
+ColorFactory.getColorVal = function(value) 
+{
+    try 
+    {
+        if (value.length() == 6)
+        {
+            var alpha = 255;
+            var red = parseInt(value.substring(0, 2) , 16);
+            var green = parseInt(value.substring(2, 4) , 16);
+            var blue = parseInt(value.substring(4, 6) , 16);
+            return this.encode(alpha, red, green, blue);
+        }
+        else
+        {
+
+            var alpha = parseInt(value.substring(0, 2) , 16) / 255.0;
+            var red = parseInt(value.substring(2, 4) , 16) / 255.0;
+            var green = parseInt(value.substring(4, 6) , 16) / 255.0;
+            var blue = parseInt(value.substring(6, 8) , 16) / 255.0;
+            return this.encode(alpha, red, green, blue);
+        }
+        
+    } catch (e) {
+        return this.encode(255, 255, 255, 255);
+    }
+    
+}
+
 ColorFactory.prototype.getPlayerColorFore = function(player) {
 	switch (player)
 	{
@@ -154,5 +183,32 @@ ColorFactory.prototype.getColorId = function(color)
 	}
 	
 	return this.white;
+
 }
 
+
+ColorFactory.encode = function( a, r, g, b)
+{
+    //System.out.println( (a << 24) + (r << 16) + (g << 8) + b);
+    return (a << 24) + (r << 16) + (g << 8) + b; 
+}
+
+ColorFactory.decodeA = function(col)
+{
+    return (col >> 24) & 255;
+}
+
+ColorFactory.decodeR = function(col)
+{
+    return (col >> 16) & 255;
+}
+
+ColorFactory.decodeG = function(col)
+{
+    return (col >> 8) & 255;
+}	
+
+ColorFactory.decodeB = function(col)
+{
+    return col & 255;
+}

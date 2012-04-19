@@ -682,7 +682,7 @@ GameonApp.prototype.onEvent2 = function(gl, response)
 			this.mObjectsFact.scale(resptype , respdata);
 			break;
 		case 4130:
-			this.mObjectsFact.texture(resptype , respdata);
+			this.mObjectsFact.texture(resptype , respdata, respdata2);
 			break;
 		case 4140:
 			this.mObjectsFact.state(resptype , respdata);
@@ -711,18 +711,27 @@ GameonApp.prototype.onEvent2 = function(gl, response)
 			this.mSounds.setMute(mutval);
 		break;
 
-	  case 6001:
-			  this.mItems.newFromTemplate(resptype, respdata);
-		  break;
-	  case 6002:
-			  this.mItems.setTexture(resptype, respdata);
-		  break;        	  
-	  case 6003:
-			  this.mItems.createModel(resptype, respdata);
-		  break;        	          	  
-	  case 6004:
-			  this.mItems.setSubmodels(resptype, respdata);
-		  break;
+        case 6001:
+              this.mItems.newFromTemplate(resptype, respdata);
+          break;
+        case 6002:
+              this.mItems.setTexture(resptype, respdata);
+          break;        	  
+        case 6003:
+              this.mItems.createModel(resptype, respdata);
+          break;        	          	  
+        case 6004:
+              this.mItems.setSubmodels(resptype, respdata);
+          break;
+        case 6005:
+            this.mItems.newEmpty(resptype);
+            break;
+        case 6006:
+            this.mItems.addShape(resptype, respdata, respdata2, respdata3, respdata4);
+            break;
+        case 6007:
+            this.mItems.addShapeFromData(resptype, respdata, respdata2 , respdata3);
+            break;          
 	  case 7000:
 		  this.connect(resptype, respdata);
 		  break;            

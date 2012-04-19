@@ -96,7 +96,7 @@ addShape : function(shape)
 	this.mIndexCount += shape.getIndexCount();
 },
 	
-generate : function(gl) 
+generate : function() 
 {
 	if (this.mGenerated == true)
 	{
@@ -290,6 +290,7 @@ drawRef : function(gl, ref)
 		}
 	}else
 	{
+    	//this.mTextureOffset = 0;
 		gl.uniform2f(gl.getUniformLocation(gl.program, "texOffset"), 0.0, 0.0);	
 	}
 	
@@ -316,8 +317,10 @@ setScale : function( x, y, z)
 
 setTextureOffset : function(w, h) 
 {
-	this.mTextureW = parseFloat(w);
-	this.mTextureH = parseFloat(h);
+    if (w>0)
+        this.mTextureW = parseFloat(w);
+    if (h>0)
+        this.mTextureH = parseFloat(h);
 	this.mTextureOffset = 0;
 },
 
