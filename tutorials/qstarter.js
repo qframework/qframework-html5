@@ -1,3 +1,5 @@
+
+
 function getPositionX(event)
 {
 	var x = new Number();
@@ -83,13 +85,16 @@ function QStarter()
 		return gl;
 	}
 	this.handleMouseUp = function (event) {
-		qstart.mApp.mouseClicked(getPositionX(event), getPositionY(event));
+		var pressdelay = new Date().getTime() - this.mPressStart;
+		qstart.mApp.touchEnd(getPositionX(event), getPositionY(event) , pressdelay);
 		qstart.dragging = false;
 	}
 	
 	this.handleMouseDown = function (event) {
 		qstart.dragging = true;
+		this.mPressStart = new Date().getTime();
 		qstart.mApp.onFocusProbe(getPositionX(event), getPositionY(event));
+		qstart.mApp.touchStart(getPositionX(event), getPositionY(event) );
 	}
 	this.handleMouseMove = function (event) {
 		if (qstart.dragging) {

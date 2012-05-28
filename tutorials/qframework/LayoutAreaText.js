@@ -46,7 +46,7 @@ function LayoutAreaText(subtype , app)
     this.mOwner = [];
     this.mParent =  undefined;
     this.mLayout = LayoutArea_Layout.NONE;
-    this.mDisplay = GameonWorld_Display.WORLD;
+    this.mDisplay = 0;
     this.mItemFields = [];
     this.mText = undefined;
     this.mData = undefined;
@@ -73,7 +73,7 @@ function LayoutAreaText(subtype , app)
 	this.mColors[1] = this.mApp.mColors.white;
 	this.mColors[2] = this.mApp.mColors.white;
 	this.mColors[3] = this.mApp.mColors.white;
-	
+	this.mPsyData = undefined;
 	this.mModifier = 0;
 	
 	var val = subtype.charAt( subtype.length -1 );
@@ -81,13 +81,14 @@ function LayoutAreaText(subtype , app)
 	{
 		this.mModifier = (val-'0')*1.0+1.0;
 	}
-		
+	
+	if (subtype.indexOf("mlinew") == 0)
+	{
+		this.mSubType = LayoutAreaText_SubType.MLINEW;
+	}else 
 	if (subtype.indexOf("mline") == 0)
 	{
 		this.mSubType = LayoutAreaText_SubType.MLINE;
-	}else if (subtype.indexOf("mlinew") == 0)
-	{
-		this.mSubType = LayoutAreaText_SubType.MLINEW;
 	}else if (subtype.indexOf("label") == 0)
 	{
 		this.mSubType = LayoutAreaText_SubType.LABEL;
@@ -146,11 +147,21 @@ LayoutAreaText.prototype.getTextW = function(max, text)
 		retstr += " ";
 		retstr += newstr;
 		currlen = retstr.length;
-		text.slice(0,1);
+		text.splice(0,1);
 	}
 	
 	return retstr;
 }
+
+function strtrim(s)
+{
+    var l=0; var r=s.length -1;
+    while(l < s.length && s[l] == ' ')
+    {     l++; }
+    while(r > l && s[r] == ' ')
+    {     r-=1;     }
+    return s.substring(l, r+1);
+} 
 
 LayoutAreaText.prototype.initMLineW = function()
 {
@@ -160,10 +171,13 @@ LayoutAreaText.prototype.initMLineW = function()
 	var height = this.mBounds[1];
 	var fieldcnt = 0;
 	var charcnt = 0;
-	var text =  this.mText.split(" ");
+	var strtext  = strtrim(this.mText);
+	//var text =  this.mText.split(" ");
+	var text =  strtext.split(" ");
 	
 	var divy = height / this.mSize;
 	var divy2 = 1.0 / this.mSize;	
+	
 	
 	for (var a=this.mSize-1; a>=0 ; a--)
 	{
@@ -175,7 +189,8 @@ LayoutAreaText.prototype.initMLineW = function()
 		field.mW = 1 - 1 / 20;;
 		field.mH = divy2  - divy2/20;
 		field.mRef.setPosition(field.mX,field.mY,field.mZ);
-		field.mRef.setScale(field.mW,field.mH,1);       
+		field.mRef.setScale(field.mW,field.mH,1);    
+		
 		field.setText( this.getTextW(this.mSizeW,text ) , this.mSizeW);
 		fieldcnt++;
 		

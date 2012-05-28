@@ -38,13 +38,22 @@ ObjectsFactory.prototype.get = function(name)
 
 }
 
-ObjectsFactory.prototype.addModel = function( name, item)
+ObjectsFactory.prototype.addModel = function( name, item , domainname)
 {
 	if ( this.mItems[name] != undefined)
 	{
 		return;
 	}
-	this.mApp.mWorld.add(item.mModel);
+	
+	var domain = this.mApp.world().getDomainByName(domainname);
+	if (domain != undefined)
+	{
+		this.mApp.world().add(item.mModel);
+	}else
+	{	
+		this.mApp.mWorld.add(item.mModel);
+	}
+	
 	item.mModel.mEnabled = true;
 	this.mItems[name] =  item;
 }
@@ -58,14 +67,14 @@ ObjectsFactory.prototype.removeModel = function( name)
 	var item = this.mItems[name];
 
 	var model = item.mModel;
-	model.setVisible(false);
+	//model.setVisible(false);
 
 	delete this.mItems[name];
 	this.mApp.mWorld.remove(model);
 	// todo check if model hangs on in world
 }
 
-ObjectsFactory.prototype.create = function(name, data) 
+ObjectsFactory.prototype.create = function(name, data , loc , color) 
 {
 	if ( this.mItems[name] != undefined)
 	{
@@ -73,13 +82,21 @@ ObjectsFactory.prototype.create = function(name, data)
 	}
 	
 	
-	var model = this.mApp.mItems.getFromTemplate(name,data);
+	var model = this.mApp.mItems.getFromTemplate(name,data , color);
 	if (model != undefined)
 	{
         var modelnew = model.copyOfModel();
 		var item = new LayoutItem(this.mApp);
 		item.mModel = modelnew;
-		this.addModel(name,item);
+		if (loc != undefined)
+		{
+			var domain = this.mApp.world().getDomainByName(loc);
+			//model.mLoc = domain.mRenderId;
+			this.addModel(name,item, loc);
+		}else
+		{		
+			this.addModel(name,item);
+		}
 	}
 }	
 
@@ -97,7 +114,7 @@ ObjectsFactory.prototype.place = function(name, data)
     var coords = new Array(3);
     ServerkoParse.parseFloatArray(coords, data);
 
-    var ref = model.getRef(refid.id);
+    var ref = model.getRef(refid.id , 0);
     ref.setPosition(coords);
     ref.set();
 
@@ -115,7 +132,7 @@ ObjectsFactory.prototype.scale = function(name, data)
 	var model = item.mModel;
 
     var coords = new Array(3);
-    ServerkoParse.parseFloatArray(coords, data);
+    ServerkoParse.parseFloatArray(coords, data , 0);
 
     var ref = model.getRef(refid.id);
     ref.setScale(coords);
@@ -192,7 +209,7 @@ ObjectsFactory.prototype.state = function(name, data)
 	}
 	
 	model.ref(refid.id).setVisible(visible);
-	model.setVisible(visible);
+	//model.setVisible(visible);
 }
 
 
@@ -224,7 +241,14 @@ ObjectsFactory.prototype.initObjects = function(response)
 ObjectsFactory.prototype.processObject = function( objData) {
 	var name = objData["name"];
 	var template = objData["template"];
-	this.create(name , template);
+	
+	var color= undefined;
+	if (objData["color"] != undefined)
+	{
+		color= objData["color"];
+	}
+	
+	this.create(name , template, undefined, color);
 	
 	if (objData["location"] != undefined)
 	{	        
@@ -281,7 +305,7 @@ ObjectsFactory.prototype.getRef = function(name)
     }
     
     var model = item.mModel;
-    var ref = model.getRef(refid.id);
+    var ref = model.getRef(refid.id , 0);
     return ref;
     
 }    

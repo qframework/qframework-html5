@@ -41,7 +41,7 @@ function LayoutField( parent)
     this.mFieldType = LayoutField_FieldType.NONE;
     this.mOwner = 0;
 	this.mApp = parent.mApp;
-	this.mRef = new GameonModelRef();	
+	this.mRef = new GameonModelRef(undefined, parent.mDisplay);	
 	this.mActive = true;
 	this.mState = LayoutArea_State.VISIBLE;
 }
@@ -100,16 +100,8 @@ LayoutField.prototype.clear = function() {
 	this.mOwner = 0;
 	if (this.mText != undefined)
 	{
-		if (this.mParent.mDisplay == GameonWorld_Display.HUD)
-		{
-			var r = this.mApp.mWorld.mTextsHud;
-			r.remove(this.mText);
-		}
-		else
-		{
-			var r = this.mApp.mWorld.mTexts;
-			r.remove(this.mText);
-		}                
+		var domain = this.mApp.world().getDomain(this.mParent.mDisplay);
+		domain.removeText(this.mText);
 		this.mText = undefined;
 	}    	
 }
@@ -150,12 +142,12 @@ LayoutField.prototype.setText = function(data, num)
 	var h = this.mH;
 	var x = this.mX;
 	var y = this.mY;
+	var domain = this.mApp.world().getDomain(this.mParent.mDisplay);
 	if (data == undefined || data.length == 0)
 	{
 		if (this.mText != undefined)
 		{
-			this.mApp.mWorld.mTextsHud.remove(this.mText);
-			this.mApp.mWorld.mTexts.remove(this.mText);
+			domain.removeText(this.mText);
 			this.mText = undefined;
 		}
 		return;
@@ -168,35 +160,18 @@ LayoutField.prototype.setText = function(data, num)
 		this.mText.setRef();
 	}else {
 		
-		if (this.mParent.mDisplay == GameonWorld_Display.HUD)
-		{
-			if (num > 0) {
-				this.mText = new TextItem(this.mApp, x,y,w,h,this.mZ+0.002,
-					data, num, this.mOwner , this.mParent.mDisplay, this.mParent.mLayout,
-	        				this.mParent.mColors);
-			}else{
-				this.mText = new TextItem(this.mApp, x,y,w,h,this.mZ+0.002, data, -1.0,
-				this.mOwner, this.mParent.mDisplay, this.mParent.mLayout,
-	        				this.mParent.mColors);
-			}
-			this.mApp.mWorld.mTextsHud.add(this.mText , 
-							this.mParent.mState == LayoutArea_State.VISIBLE && this.mParent.mPageVisible);
-			this.mText.setParent(  this.mApp.mWorld.mTextsHud );
-		}else
-		{
-			if (num > 0) {
-				this.mText = new TextItem(this.mApp, x,y,w,h,this.mZ+0.002, 
-					data, num, this.mOwner, this.mParent.mDisplay, this.mParent.mLayout,
-	        				this.mParent.mColors);
-			}else{
-				this.mText = new TextItem(this.mApp, x,y,w,h,this.mZ+0.002, 
-					data, -1.0 , this.mOwner, this.mParent.mDisplay, this.mParent.mLayout,
-	        				this.mParent.mColors);
-			}
-			this.mApp.mWorld.mTexts.add(this.mText , 
-							this.mParent.mState == LayoutArea_State.VISIBLE && this.mParent.mPageVisible);
-			this.mText.setParent(  this.mApp.mWorld.mTexts );
+		if (num > 0) {
+			this.mText = new TextItem(this.mApp, x,y,w,h,this.mZ+0.002,
+				data, num, this.mOwner , this.mParent.mDisplay, this.mParent.mLayout,
+						this.mParent.mColors);
+		}else{
+			this.mText = new TextItem(this.mApp, x,y,w,h,this.mZ+0.002, data, -1.0,
+			this.mOwner, this.mParent.mDisplay, this.mParent.mLayout,
+						this.mParent.mColors);
 		}
+		domain.mTexts.add(this.mText , 
+						this.mParent.mState == LayoutArea_State.VISIBLE && this.mParent.mPageVisible);
+		this.mText.setParent(  domain.mTexts );
 		//this.mText.setOrientation(this.mParent.mLayout);	
 	}
 	var ref = this.mText.mRef;
@@ -329,4 +304,12 @@ LayoutField.prototype.createAnim = function(type, delay, data)
 		var index = this.mItem.mModel.findRef( this.mItem.mModelRef);
 		this.mItem.mModel.createAnim(type , index ,delay, data);
 	}		
+}
+
+LayoutField.prototype.distToCenter = function(coords)
+{
+	var x= this.mX - coords[0];
+	var y= this.mY - coords[1];
+	var z= this.mZ - coords[2];
+	return Math.sqrt(x*x+y*y+z*z);
 }

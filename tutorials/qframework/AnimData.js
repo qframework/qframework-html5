@@ -1056,7 +1056,7 @@ AnimData.prototype.setDelay = function(delay, repeat)
 AnimData.prototype.saveBackup = function(backup, hide)
 {
 	if (this.mSavedRef == undefined)
-		this.mSavedRef = new GameonModelRef(undefined);
+		this.mSavedRef = new GameonModelRef(undefined, -1);
 	
 	this.mSavedRef.copy(backup);
 	this.mSavedRef.copyMat(backup);

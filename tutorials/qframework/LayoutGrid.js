@@ -9,7 +9,6 @@ function LayoutGrid( world,  app)
 
 	this.mVisibleAreas = [];
 	this.mAreas = {};
-	this.mAreasHud = {};
 	this.mPageIds = {};
 	this.mWorld = world;
 	this.mApp = app;
@@ -171,12 +170,7 @@ LayoutGrid.prototype.processAreaData2 = function(areaData) {
 			area.createItems(items , false);
 		}
 
-		if (area.mDisplay == GameonWorld_Display.HUD) 
-		{
-			this.mAreasHud[area.mID] =  area;
-		} else {
-			this.mAreas[area.mID] = area;
-		}
+		this.mAreas[area.mID] = area;
 	
 		area.createWorldModel();
 		area.updateModelsTransformation();
@@ -255,6 +249,16 @@ LayoutGrid.prototype.setAreaLocation = function(areaid , strData) {
 	}
 }
 
+LayoutGrid.prototype.areaMove = function(areaid, strData) 
+{
+	var area = this.getArea(areaid);
+	if (area != undefined) 
+	{
+		//area.clear();
+		area.move(strData);
+	}
+}    
+
 LayoutGrid.prototype.setAreaRotation = function(areaid , strData) {
 	var area = this.getArea(areaid);
 	if (area != undefined) {
@@ -309,13 +313,6 @@ LayoutGrid.prototype.getArea = function(ID) {
 	{
 		//console.log("return " + area.mID );
 		return area;
-	}
-
-	var areahud = this.mAreasHud[ID];
-	if (areahud != undefined)
-	{
-		//console.log("return hud " + areahud.mID );
-		return areahud;
 	}
 	
 	return undefined;
@@ -473,7 +470,6 @@ LayoutGrid.prototype.onAreaUpdateOnFocusGain = function(areaID, data) {
 
 LayoutGrid.prototype.clearAll = function() {
 	this.mAreas.clear();
-	this.mAreasHud.clear();
 
 }
 
@@ -519,23 +515,14 @@ LayoutGrid.prototype.onEvent2 = function(response)
 			this.animScreen(resptype , respdata);
 			break;            			
 		case 2500:
-			this.onCameraFit(resptype , respdata);
+			this.onCameraFit(resptype , respdata, respdata2);
 			break;
 		case 2501:
-			this.onCameraSet(resptype , respdata);
+			this.onCameraSet(resptype , respdata, respdata2);
 			break;
 		case 2502:
-			this.onCameraProj(resptype , respdata ,respdata2);
+			this.onCameraProj(resptype , respdata ,respdata2, respdata3);
 			break;         
-		case 2510:
-			this.onCameraFitHud(resptype , respdata);
-			break;
-		case 2511:
-			this.onCameraSetHud(resptype , respdata);
-		break;
-		case 2512:
-			this.onCameraProjHud(resptype , respdata , respdata2);
-		break;		  
 		 case 3001:
 			  this.onAreaDelete(resptype, respdata);
 		 break;				    
@@ -578,6 +565,9 @@ LayoutGrid.prototype.onEvent2 = function(response)
 		case 3190:	// area new state
 			this.setAreaLocation(resptype, respdata);
 		break;
+		case 3196:	// area new state
+			this.areaMove(resptype, respdata);
+		break;		
 		case 3191:	// area new state
 			this.setAreaScale(resptype, respdata);
 		break;	
@@ -795,7 +785,7 @@ LayoutGrid.prototype.moveFigureA = function(areaFrom, indexFrom, areaTo, indexTo
 			return;
 		}
 		
-		startAnim = new GameonModelRef(undefined);
+		startAnim = new GameonModelRef(undefined, arearemove.mDisplay);
 		startAnim.copy( item.mModelRef);
 		startAnim.copyMat( item.mModelRef);
 		arearemove.removeFigure(indexFrom);
@@ -842,21 +832,24 @@ LayoutGrid.prototype.pathRefsFromPath = function(pathrefs,path, item) {
 
 }
 
-LayoutGrid.prototype.onDragNearest = function(vec, vecHud)
+LayoutGrid.prototype.onDragNearest = function(x,y)
 {
-	return this.findNearest(vec, vecHud, false);
+	return this.findNearest(x,y, false);
 }
-LayoutGrid.prototype.onClickNearest = function(vec, vecHud) 
+LayoutGrid.prototype.onClickNearest = function(x,y) 
 {
-	return this.findNearest(vec, vecHud, true);
+	return this.findNearest(x,y, true);
 }
 
 
-LayoutGrid.prototype.findNearest = function(vec, vecHud , click) 
+LayoutGrid.prototype.findNearest = function(x,y, click) 
 {
 	var nearest = undefined;    	
 	var mindist = 1e7;
-
+	var rayVec = [0,0,0];
+	var eye = undefined;
+	var lastDomain = -1;
+	
 	for (var a=this.mVisibleAreas.length-1; a>=0 ; a--)
 	{
 		var ahud = this.mVisibleAreas[a];
@@ -881,168 +874,37 @@ LayoutGrid.prototype.findNearest = function(vec, vecHud , click)
 				}
 		}
 		
-		if (ahud.mDisplay != GameonWorld_Display.HUD)
+		if (lastDomain != ahud.mDisplay)
 		{
-			continue;
-		}
-		var pair = ahud.fieldClicked(this.mApp.cs().eyeHud() , vecHud);
-		if (pair != undefined)
-		{
-			if (pair.mDist <= mindist) {
-				// set nearest
-				nearest = pair;
-				mindist = pair.mDist;
-			}        		
-		}
-	}
-	if (mindist != 1e7){
-		return nearest;
-	}        
-	for (var a= this.mVisibleAreas.length-1; a>=0 ; a--)
-	{
-		var ahud = this.mVisibleAreas[a];
-		if (ahud.mActiveItems == 0)
-		{
-			continue;
-		}
-		
-		if (click == true)
-		{
-			if ( ahud.mOnclick == undefined || ahud.mOnclick.length == 0 )
+			var domain = this.mApp.world().getDomain(ahud.mDisplay);
+			if (domain == undefined || domain.mVisible == false)
+			{
 				continue;
-		}else
-		{
-			if (!ahud.mHasScrollV && !ahud.mHasScrollH)
-			{		
-				if ( (ahud.mOnFocusGain== undefined || ahud.mOnFocusGain.length == 0) &&  
-					(ahud.mOnFocusLost== undefined || ahud.mOnFocusLost.length == 0))
-					continue;
 			}
-		}
-		
-		if (ahud.mDisplay == GameonWorld_Display.HUD)
-		{
-			continue;
-		}
-		var pair = ahud.fieldClicked(this.mApp.cs().eye() , vec);
-		if (pair != undefined)
-		{
-			if (pair.mDist <= mindist) {
-				// set nearest
-				nearest = pair;
-				mindist = pair.mDist;
-			}        		
-		}
-	}        
-	
-	if (mindist != 1e7){
-		return nearest;
-	}    	
-	
-	return undefined;
-}
-
-/*
-LayoutGrid.prototype.onClickNearest = function(x, y, xhud, yhud, div, divhud) {
-	// find first if HUD is clicked
-	for (var a=this.mVisibleAreas.length-1; a>=0 ; a--)
-	{
-		var ahud = this.mVisibleAreas[a];
-		if (ahud.mDisplay != LayoutArea_Display.HUD)
-			continue;
-		if (ahud.mState != LayoutArea_State.VISIBLE)
-		{
-			continue;
+			
+			lastDomain = ahud.mDisplay;
+			domain.mCS.screen2spaceVec(x, y, rayVec);
+			eye = domain.mCS.eye();
 		}
 			
-		var pair = ahud.fieldClicked(xhud,yhud);
+		var pair = ahud.fieldClicked(eye, rayVec);
 		if (pair != undefined)
 		{
-			//Log.d("model" , " found hud");
-			return pair;
-		}
-	}
-	
-	for (var a=this.mVisibleAreas.length-1; a>=0 ; a--)
-	{
-		var area = this.mVisibleAreas[a];
-		if (area.mDisplay == LayoutArea_Display.HUD)
-			continue;
-		if (area.mState != LayoutArea_State.VISIBLE)
-		{
-			continue;
-		}        
-		
-		var pair = area.fieldClicked(x,y);
-		if (pair != undefined)
-		{
-			//Log.d("model" , " found hud");
-			return pair;
-		}
-	}
-
-	
-	var nearest =undefined;    	
-	var mindist = 10000000;
-	for (var a=this.mVisibleAreas.length-1; a>=0 ; a--)
-	{
-		var area = this.mVisibleAreas[a];
-		if (area.mDisplay != LayoutArea_Display.HUD)
-			continue;
-		
-		if (area.mState != LayoutArea_State.VISIBLE)
-		{
-			continue;
-		}
-
-		var pair = area.fieldClickNearest(xhud,yhud);
-		if (pair != undefined)
-		{
-			if (pair.mDist < mindist && pair.mDist < divhud) {
+			if (pair.mDist <= mindist) {
 				// set nearest
 				nearest = pair;
 				mindist = pair.mDist;
-				
-			}
+			}        		
 		}
-				}
-	if (mindist != 10000000){
+	}
+	if (mindist != 1e7){
 		return nearest;
-	}
-
-	nearest =undefined;    	
-	 mindist = 10000000;
-	for (var a=this.mVisibleAreas.length-1; a>=0 ; a--)
-	{
-		var area = this.mVisibleAreas[a];
-		if (area.mDisplay != LayoutArea_Display.NONE)
-			continue;
-		
-		if (area.mState != LayoutArea_State.VISIBLE)
-		{
-			continue;
-		}
-
-		var pair = area.fieldClickNearest(x,y);
-		if (pair != undefined)
-		{
-			if (pair.mDist < mindist && pair.mDist < div) {
-				// set nearest
-				nearest = pair;
-				mindist = pair.mDist;
-			}
-		}
-	}
-	if (mindist != 10000000){
-		return nearest;
-	}
-	
+	}        
 	
 	return undefined;
 }
-*/
 
-LayoutGrid.prototype.onCameraFit = function(type , strData)
+LayoutGrid.prototype.onCameraFit = function(type , strData , domainid)
 {
 	
 	if ( type== "fit")
@@ -1056,16 +918,23 @@ LayoutGrid.prototype.onCameraFit = function(type , strData)
 			canvash = parseFloat( tok[ 1 ]);
 		}
 
-		var eye = new Array( 0.0,0.0,1);
-		var center = new Array(  0.0, 0.0, 0.0);
-		var up = new Array(  0.0, 1.0, 0.0 );
-		this.mApp.cs().init( canvasw/2 , canvash/2 , 0 );
-		var z = this.mApp.cs().snap_cam_z(eye  ,  center , up); 
-		this.mApp.setScreenBounds();
+		var domain = this.mApp.world().getDomainByName(domainid);
+		if (domain != undefined)
+		{		
+			var eye = new Array( 0.0,0.0,1);
+			var center = new Array(  0.0, 0.0, 0.0);
+			var up = new Array(  0.0, 1.0, 0.0 );
+			domain.mCS.init( canvasw/2 , canvash/2 , 0 );
+			var z = domain.mCS.snap_cam_z(eye  ,  center , up); 
+			if (domainid == "hud" || domainid == "world")
+			{			
+				this.mApp.setScreenBounds();
+			}
+		}
 	}
 }
 
-LayoutGrid.prototype.onCameraSet = function(lookAt , eyeStr)
+LayoutGrid.prototype.onCameraSet = function(lookAt , eyeStr , domainid)
 {
 	
 	var tok = lookAt.split( ","); 
@@ -1080,70 +949,35 @@ LayoutGrid.prototype.onCameraSet = function(lookAt , eyeStr)
 	if (tok2.length > 1) eye[1] = parseFloat( tok2[1]);
 	if (tok2.length > 2) eye[2] = parseFloat( tok2[2]);
 
-	this.mApp.cs().setCamera(lookat, eye);
-	this.mApp.setScreenBounds();
-}
-
-LayoutGrid.prototype.onCameraFitHud = function(type , strData)
-{
-  
-	if ( type == "fit")
-	{
-		var tok = strData.split(",");
-		var canvasw = 0;
-		var canvash = 0;
-		if (tok.length > 1)
-		{
-			canvasw = parseFloat( tok[0]);
-			canvash = parseFloat( tok[1]);
+	var domain = this.mApp.world().getDomainByName(domainid);
+	if (domain != undefined)
+	{		
+		domain.mCS.setCamera(lookat, eye);
+		if (domainid == "hud" || domainid == "world")
+		{			
+			this.mApp.setScreenBounds();
 		}
-		var eye = new Array( 0.0,0.0,1);
-		var center = new Array( 0.0, 0.0, 0.0);
-		var up = new Array( 0.0, 1.0, 0.0 );
-		this.mApp.cs().init( canvasw/2 , canvash/2 , 0 );
-		var z = this.mApp.cs().snap_cam_z_hud(eye  ,  center , up);
-		this.mApp.setScreenBounds();
 	}
 }
 
-LayoutGrid.prototype.onCameraSetHud = function(lookAt , eyeStr)
-{
-	var tok = lookAt.split( ","); 
-	var lookat = new Array(3);
-	if (tok.length > 0) lookat[0] = parseFloat( tok[0]);
-	if (tok.length > 1) lookat[1] = parseFloat( tok[1]);
-	if (tok.length > 2) lookat[2] = parseFloat( tok[2]);
-		
-	var tok2 =  eyeStr.split(","); 
-	var eye = new Array(3);
-	if (tok2.length > 0) eye[0] = parseFloat( tok2[0]);
-	if (tok2.length > 1) eye[1] = parseFloat( tok2[1]);
-	if (tok2.length > 2) eye[2] = parseFloat( tok2[2]);
-
-	this.mApp.cs().setCameraHud(lookat, eye);
-	this.mApp.setScreenBounds();
-	
-}
 
 
-LayoutGrid.prototype.onCameraProjHud = function(fov , far , near )
+LayoutGrid.prototype.onCameraProj = function(fov , far , near , domainid)
 {
 	var fovf = parseFloat(fov);
 	var farf = parseFloat(far);
 	var nearf = parseFloat(near);
-	
-	this.mApp.view().setFovHud( fovf, farf, nearf);
-	this.mApp.setScreenBounds();
-}
 
-LayoutGrid.prototype.onCameraProj = function(fov , far , near)
-{
-	var fovf = parseFloat(fov);
-	var farf = parseFloat(far);
-	var nearf = parseFloat(near);
-	
-	this.mApp.view().setFov( fovf, farf, nearf);
-	this.mApp.setScreenBounds();
+	var domain = this.mApp.world().getDomainByName(domainid);
+	if (domain != undefined)
+	{		
+		domain.setFov( fovf, farf, nearf);
+		if (domainid == "hud" || domainid == "world")
+		{			
+			this.mApp.setScreenBounds();
+		}
+	}
+
 }
 
 
@@ -1160,7 +994,21 @@ LayoutGrid.prototype.setVisibleArea = function(area , visible)
 		
 		if ( this.mVisibleAreas.indexOf(area) < 0)
 		{
-			this.mVisibleAreas.push(area);
+			var added = false;
+			for (var a=0; a< this.mVisibleAreas.length; a++)
+			{
+				var old = this.mVisibleAreas[a];
+				if (old.mDisplay > area.mDisplay)
+				{
+					this.mVisibleAreas.splice(a, 0,area);
+					added = true;
+					break;
+				}
+			}
+			if (!added)
+			{		
+				this.mVisibleAreas.push(area);
+			}
 		}
 	}else if (!visible){
 		var  i = this.mVisibleAreas.indexOf(area);
@@ -1245,7 +1093,7 @@ LayoutGrid.prototype.hidePage = function(pageid , respdata)
 	}
 	if (respdata != undefined)
 	{
-		this.mApp.sendExec(delay , "Q.layout.hide_('"+pageid+"');");
+		this.mApp.sendExec(delay , "Q.layout.hide('"+pageid+"').now();");
 	}	
 }
 
@@ -1272,10 +1120,7 @@ LayoutGrid.prototype.removeArea = function(area)
 	{
 		array_removeElement(this.mAreas , area);
 	}
-	if ( this.mAreasHud[area.mID] != undefined )
-	{
-		array_removeElement(this.mAreasHud , area);
-	}
+
 	var areap = this.mPageIds[area.mPageId];
 	if (areap != undefined)
 	{

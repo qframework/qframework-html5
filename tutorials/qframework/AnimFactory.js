@@ -251,7 +251,11 @@ AnimFactory.prototype.animObject = function(animid,objectid,data, delaydata,call
 		delay = intdata[0];    	
 	if (count == 2)
 		repeat = intdata[1];
-	this.buildObjectAdata(ref, atype, delay, repeat , data , callback);
+	
+	if (ref != undefined)
+	{
+		this.buildObjectAdata(ref, atype, delay, repeat , data , callback);
+	}
 	  
 	// ref - is animated! - has AnimData, once allocated
 	

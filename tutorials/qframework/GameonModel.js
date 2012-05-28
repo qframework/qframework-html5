@@ -23,14 +23,12 @@ function GameonModel(name , app)
     //GLVertex	mPosition;
 	this.mRefs = [];
 	this.mVisibleRefs = [];
-	this.mLoc = GameonWorld_Display.WORLD;
     this.mSubmodels  = 0;
     this.mModelTemplate = GameonModelData_Type.NONE;
     this.mHasAlpha = false;	
     this.mIsModel = false;
 	this.mApp = app;
 	this.mWorld = app.mWorld;
-	this.mVisible = true;
 
 	this.mName = "";
 	this.mBBoxMin = new Array(3);
@@ -85,6 +83,7 @@ GameonModel.mStaticBounds =  [
 GameonModel.inheritsFrom( GLModel);
 
 
+/*
 GameonModel.prototype.createPlane = function(left, bottom, back, right, top, front, color)  
 {
 	var shape = new GLShape(this);
@@ -101,7 +100,7 @@ GameonModel.prototype.createPlane = function(left, bottom, back, right, top, fro
 	//this.mTextureID = 1;//this.mApp.textures().get(TextureFactory_Type.DEFAULT);
 	this.addShape(shape);
 }
-
+*/
 GameonModel.prototype.createPlaneTex = function(left, bottom, back, right, top, front,  tu1,tv1, tu2, tv2, color)  
 {
 	var shape = new GLShape(this);
@@ -119,7 +118,7 @@ GameonModel.prototype.createPlaneTex = function(left, bottom, back, right, top, 
 
 
 
-GameonModel.prototype.createModel = function(type, left, bottom,  back, 
+GameonModel.prototype.createModel3 = function(type, left, bottom,  back, 
 		right, top,  front, textid) {
 	var ratiox = right - left;
 	var ratioy = front - bottom;
@@ -180,45 +179,77 @@ GameonModel.prototype.createModel = function(type, left, bottom,  back,
 
 }
 
-GameonModel.prototype.createModel = function(type, textid) {
+GameonModel.prototype.createModel = function(type, textid , color, grid) 
+{
     	
     	var data = GameonModelData.getData(type);
     	// model info - vertex offset?
     	var len = data.length;
-    	var color = this.mApp.colors().white;
-    	var shape = new GLShape(this);
-    	for (var a=0; a< len; a+=9 ) {
-    		var vx1 = data[a][0];
-    		var vy1 = data[a][1];
-    		var vz1 = data[a][2];
+   	
+    	var divx = 1; 
+    	var divy = 1;
+    	var divz = 1;
+    	var countx = 1; 
+    	var county = 1;
+    	var countz = 1;
+    	
+    	if (grid != undefined)
+    	{
+    		divx = 1 / grid[0];
+    		divy = 1 / grid[1];
+    		divz = 1 / grid[2];
+    		countx = grid[0]*2; 
+        	county = grid[1]*2;
+        	countz = grid[2]*2;
     		
-    		var tu1 = data[a+2][0];
-    		var tv1 = 1.0 - data[a+2][1];    		
-    		var v1 = shape.addVertex(vx1, vy1, vz1, tu1, tv1, color);
-    		
-    		var vx2 = data[a+3][0];
-    		var vy2 = data[a+3][1];
-    		var vz2 = data[a+3][2];
-    		
-    		var tu2 = data[a+5][0];
-    		var tv2 = 1.0 - data[a+5][1];    		
-    		
-    		var v2 = shape.addVertex(vx2, vy2, vz2, tu2, tv2, color);
-
-    		var vx3 = data[a+6][0];
-    		var vy3 = data[a+6][1];
-    		var vz3 = data[a+6][2];
-    		
-    		var tu3 = data[a+8][0];
-    		var tv3 = 1.0 - data[a+8][1];    		
-    		
-    		var v3 = shape.addVertex(vx3, vy3, vz3, tu3, tv3, color);    		
-    		
-    		shape.addFace( new GLFace(v1,v2,v3));
-    		//shape.setFaceColor(a/9, color);
     	}
     	
-		this.addShape(shape);
+    	for (var x = 1.0; x <= countx; x+= 2)
+    	{
+        	for (var y = 1.0; y <= county; y+= 2)
+        	{    		
+            	for (var z = 1.0; z <= countz; z+= 2)
+            	{   
+
+							
+					var shape = new GLShape(this);
+					for (var a=0; a< len; a+=9 ) 
+					{
+						var vx1 = data[a][0] * divx+ -0.5 + divx*x/2;
+						var vy1 = data[a][1] * divy+ -0.5 + divy*y/2;
+						var vz1 = data[a][2] * divz+ -0.5 + divz*z/2;
+						
+						var tu1 = data[a+2][0];
+						var tv1 = 1.0 - data[a+2][1];    		
+						var v1 = shape.addVertex(vx1, vy1, vz1, tu1, tv1, color);
+						
+						var vx2 = data[a+3][0] * divx+ -0.5 + divx*x/2;
+						var vy2 = data[a+3][1] * divy+ -0.5 + divy*y/2;
+						var vz2 = data[a+3][2] * divz+ -0.5 + divz*z/2;
+						
+						var tu2 = data[a+5][0];
+						var tv2 = 1.0 - data[a+5][1];    		
+						
+						var v2 = shape.addVertex(vx2, vy2, vz2, tu2, tv2, color);
+
+						var vx3 = data[a+6][0] * divx+ -0.5 + divx*x/2;
+						var vy3 = data[a+6][1] * divy+ -0.5 + divy*y/2;
+						var vz3 = data[a+6][2] * divz+ -0.5 + divz*z/2;
+						
+						var tu3 = data[a+8][0];
+						var tv3 = 1.0 - data[a+8][1];    		
+						
+						var v3 = shape.addVertex(vx3, vy3, vz3, tu3, tv3, color);    		
+						
+						shape.addFace( new GLFace(v1,v2,v3));
+						//shape.setFaceColor(a/9, color);
+					}
+					this.addShape(shape);
+				}
+			}
+    	}
+    	
+		
 		this.mTextureID = textid;
     
     }    
@@ -321,21 +352,43 @@ GameonModel.prototype.createOctogon = function(left, bottom, back, right, top, f
 	this.addShape(shape);
 }    
 
-GameonModel.prototype.createPlane = function(left, bottom, back, right, top, front, color)  
+GameonModel.prototype.createPlane = function(left, bottom, back, right, top, front, color , grid)  
 {
-	var shape = new GLShape(this);
-	var leftBottomFront = shape.addVertex(left, bottom, front , 0.0 , 1.00, color);
-	var rightBottomFront = shape.addVertex(right, bottom, front , 1.0 , 1.00, color);
-	var leftTopFront = shape.addVertex(left, top, front , 0.0 , 0.00, color);
-	var rightTopFront = shape.addVertex(right, top, front , 1.00 , 0.00, color);
-	// front
-	//shape.addFace(new GLFace(leftBottomFront, leftTopFront, rightTopFront, rightBottomFront));
-	shape.addFace(new GLFace(leftBottomFront, rightTopFront , leftTopFront));
-	shape.addFace(new GLFace(leftBottomFront, rightBottomFront , rightTopFront ));
+	var divx = 1; 
+	var divy = 1;
+	var divz = 1;
+	
+	if (grid != undefined)
+	{
+		divx = 1 / grid[0];
+		divy = 1 / grid[1];
+		divz = 1 / grid[2];
+	}
+	
+	for (var x = -0.0; x < 1.0; x+= divx)
+	{
+		for (var y = -0.0; y < 1.0; y+= divy)
+		{    		
+			var left2 = left * divx + x;
+			var right2 = right * divx + x;
+			var top2 = top * divy + y;
+			var bottom2 = bottom * divy + y;
+			
+			var shape = new GLShape(this);
+			var leftBottomFront = shape.addVertex(left2, bottom2, front , 0.0 , 1.00, color);
+			var rightBottomFront = shape.addVertex(right2, bottom2, front , 1.0 , 1.00, color);
+			var leftTopFront = shape.addVertex(left2, top2, front , 0.0 , 0.00, color);
+			var rightTopFront = shape.addVertex(right2, top2, front , 1.00 , 0.00, color);
+			// front
+			//shape.addFace(new GLFace(leftBottomFront, leftTopFront, rightTopFront, rightBottomFront));
+			shape.addFace(new GLFace(leftBottomFront, rightTopFront , leftTopFront));
+			shape.addFace(new GLFace(leftBottomFront, rightBottomFront , rightTopFront ));
 
-//        shape.setFaceColor(0, color);
-	//this.mTextureID = this.mApp.textures().get(TextureFactory_Type.DEFAULT);
-	this.addShape(shape);
+		//        shape.setFaceColor(0, color);
+			//this.mTextureID = this.mApp.textures().get(TextureFactory_Type.DEFAULT);
+			this.addShape(shape);
+		}
+	}
 }
 
 GameonModel.prototype.createPlane4 = function(left, bottom, back, right, top, front, color, color2 )  
@@ -494,7 +547,7 @@ GameonModel.prototype.addref = function(ref)
 
 GameonModel.prototype.draw = function(gl, loc)
 {
-	if (!this.mEnabled || !this.mVisible) {
+	if (!this.mEnabled) {
 		return;
 	}
 	var len = this.mVisibleRefs.length;
@@ -615,13 +668,6 @@ GameonModel.prototype.setState = function(state) {
 			ref.setVisible(true);
 		}
 	}
-	if (state == LayoutArea_State.HIDDEN)
-	{
-		this.setVisible(false);
-	}else
-	{
-		this.setVisible(true);
-	}
 }
 
 
@@ -637,11 +683,11 @@ GameonModel.prototype.setState = function(state) {
 		c = color;
 	}
 	
-	this.createPlane(left-fw/2,bottom-fh/2,front   ,  left+fw/2, top+fh/2,front, color);
-	this.createPlane(right-fw/2,bottom-fh/2,front   ,  right+fw/2, top+fh/2,front, color);
+	this.createPlane(left-fw/2,bottom-fh/2,front   ,  left+fw/2, top+fh/2,front, color , undefined);
+	this.createPlane(right-fw/2,bottom-fh/2,front   ,  right+fw/2, top+fh/2,front, color, undefined);
 	
-	this.createPlane(left+fw/2,bottom-fh/2,front   ,  right-fw/2, bottom+fh/2,front, color);
-	this.createPlane(left+fw/2,top-fh/2,front   ,  right-fw/2, top+fh/2,front, color);
+	this.createPlane(left+fw/2,bottom-fh/2,front   ,  right-fw/2, bottom+fh/2,front, color, undefined);
+	this.createPlane(left+fw/2,top-fh/2,front   ,  right-fw/2, top+fh/2,front, color, undefined);
 	
 	//mTextureID = this.mApp.textures().get(this.mApp.textures().Type.DEFAULT);
 }
@@ -731,28 +777,20 @@ GameonModel.prototype.createAnimTrans = function(type , delay, away , no)
 {
 	if (no == undefined)
 		no = 0;
-	var to = new GameonModelRef(undefined); 
+	var to = new GameonModelRef(undefined , -1); 
 	to.copy( this.mRefs[no] );
 	to.copyMat( this.mRefs[no] );
-	var from = new GameonModelRef(undefined);
+	var from = new GameonModelRef(undefined , -1);
 	from.copy(to);
 	
 	var w,h,x,y;
-	if (to.mLoc == GameonWorld_Display.WORLD)
-	{
-		w = this.mApp.mCS.mWorldBBox[2] - this.mApp.mCS.mHudBBox[0];
-		h = this.mApp.mCS.mWorldBBox[1] - this.mApp.mCS.mHudBBox[5];
-	
-		x = (this.mApp.mCS.mWorldBBox[2] + this.mApp.mCS.mWorldBBox[0]) / 2;
-		y = (this.mApp.mCS.mWorldBBox[1] + this.mApp.mCS.mWorldBBox[5]) / 2;
-	}else
-	{
-		w = this.mApp.mCS.mHudBBox[2] - this.mApp.mCS.mHudBBox[0];
-		h = this.mApp.mCS.mHudBBox[1] - this.mApp.mCS.mHudBBox[5];
-	
-		x = (this.mApp.mCS.mHudBBox[2] + this.mApp.mCS.mHudBBox[0]) / 2;
-		y = (this.mApp.mCS.mHudBBox[1] + this.mApp.mCS.mHudBBox[5]) / 2;        	
-	}
+	var domain = this.mApp.world().getDomain(to.loc());
+	w = domain.mCS.mBBox[2] - domain.mCS.mBBox[0];
+	h = domain.mCS.mBBox[1] - domain.mCS.mBBox[5];
+
+	x = (domain.mCS.mBBox[2] + domain.mCS.mBBox[0]) / 2;
+	y = (domain.mCS.mBBox[1] + domain.mCS.mBBox[5]) / 2;
+
 	var z = to.mPosition[2];
 	if (type == "left")
 	{
@@ -800,15 +838,20 @@ GameonModel.prototype.createAnimTrans = function(type , delay, away , no)
 
 GameonModel.prototype.addVisibleRef = function(ref)
 {
+	if (this.mWorld == undefined)
+		return;
+		
 	if (ref.getVisible() )
 	{
 		if ( this.mVisibleRefs.indexOf(ref) < 0)
 		{
-			if (this.mVisibleRefs.length == 0)
-			{
-				this.setVisible(true);
-			}
 			this.mVisibleRefs.push( ref );
+			var domain = this.mApp.world().getDomain(ref.loc());
+			if (domain != undefined)
+			{
+				domain.setVisible(this);
+			}
+			
 		}
 	}
 }
@@ -821,33 +864,14 @@ GameonModel.prototype.remVisibleRef = function(ref)
 		if ( i >= 0)
 		{
 			this.mVisibleRefs.splice( i,1 );
-			if (this.mVisibleRefs.length == 0)
+			var domain = this.mApp.world().getDomain(ref.loc());
+			if (domain != undefined)
 			{
-				this.setVisible(false);
-			}			
+				domain.remVisible(this , false);
+			}
 		}
 	}
 }
-
-GameonModel.prototype.setVisible = function(visible)
-{
-	if (visible)
-	{
-		this.mVisible = true;
-		if (this.mWorld != undefined)
-		{
-			this.mWorld.setVisible(this);
-		}
-	}
-	else
-	{
-		this.mVisible = false;
-		if (this.mWorld != undefined)
-		{
-			this.mWorld.remVisible(this);
-		}
-	}
-}    
 
 
 GameonModel.prototype.ref = function(no)
@@ -1001,7 +1025,7 @@ GameonModel.prototype.copyOfModel = function()
     return model;
 }
 
-GameonModel.prototype.getRef = function(count) 
+GameonModel.prototype.getRef = function(count , loc) 
 {
     if (count < this.mRefs.length)
     {
@@ -1009,7 +1033,7 @@ GameonModel.prototype.getRef = function(count)
     } else {
         while (count >= this.mRefs.length)
         {
-            var ref = new GameonModelRef(this);
+            var ref = new GameonModelRef(this, loc);
             this.mRefs.push(ref);
         }
         return this.mRefs[count];
@@ -1018,3 +1042,28 @@ GameonModel.prototype.getRef = function(count)
 
 
 
+GameonModel.prototype.getVisibleRefs = function(renderId) 
+{
+	var count = 0;
+	for (var  a = 0 ; a < this.mVisibleRefs.length; a++)
+	{
+		var ref = this.mVisibleRefs[a];
+		if (ref.loc()  == renderId && ref.mVisible)
+		{
+			count ++;
+		}
+	}
+	
+	return count;
+}
+
+GameonModel.prototype.hideDomainRefs = function(renderId) 
+{
+	for (var  a = 0 ; a < this.mRefs.length; a++)
+	{
+		if (ref.loc() == renderId)
+		{
+			this.remVisibleRef(ref , false);
+		}
+	}
+}

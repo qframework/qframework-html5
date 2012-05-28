@@ -17,37 +17,38 @@
    Should be used for peace, not war :)   
 */
 
+var MAX_INTEGER = 9007199254740992;
+
 function GameonWorld(app)
 {
 
+	this.mDomains = [];
     this.mModelList = [];
-    this.mVisibleModelList = [];	
     this.mModelList2 = [];    
-	this.mVisibleModelList2 = [];    	
     this.mNewModels = [];
-	this.mTexts = new TextRender();
-	this.mTextsHud = new TextRender();
 	this.mInDraw = false;
 	
 	this.mSplashModel = undefined;
 	this.mAmbientLight = [ 1.0 , 1.0, 1.0, 1.0];
 	this.mAmbientLightChanged = false;
 	this.mApp = app;
+	this.mViewWidth = 0;
+	this.mViewHeight = 0;
+	this.mModelList = [];
+	this.mModelList2 = [];
+	this.mNewModels = [];
+	
 	GameonWorld.mWorld = this;	
+	
+	this.addDomain("world",0, true);
+	this.addDomain("hud",MAX_INTEGER, true);	
 }
 
-
-
-GameonWorld_Display =
-{
-	WORLD:0,
-	HUD:1
-}
 
 GameonWorld.prototype.initSplash = function(gl , name)
 {
 	var model = new GameonModel("splash", this.mApp);
-	model.createPlane(-1.5, -1.0, 0.0, 1.5, 1.0, 0.0,this.mApp.colors().white);
+	model.createPlane(-1.5, -1.0, 0.0, 1.5, 1.0, 0.0,this.mApp.colors().white , undefined);
 	
 	this.mApp.textures().newTexture(gl, "q_splash", name, true);
 	model.setTexture( this.mApp.textures().getTexture("q_splash"));
@@ -86,10 +87,27 @@ GameonWorld.prototype.remove = function(model)
 	{
 		this.mModelList2.splice(i,1);
 	}
-	this.remVisible(model);
+	
+	for (var a =0 ; a< this.mDomains.length ; a++)
+	{
+		var domain = this.mDomains[a];
+		domain.remVisible(model , true);
+	}	
 
 }
 	
+
+GameonWorld.prototype.reinit = function() {
+	this.mLockedDraw = true;
+	var len = this.mModelList.length;
+	for (var a=0; a< len; a++) {
+		var model = this.mModelList[a];
+		model.reset();
+	}
+
+	this.mLockedDraw = false;
+}
+
 
 GameonWorld.prototype.addModels = function(gl)
 {
@@ -115,12 +133,6 @@ GameonWorld.prototype.addModels = function(gl)
 			model.generate();
 			this.mModelList.push(model);
 		}
-		/*
-		if (model.getVisible())
-		{
-			this.setVisible(model);
-		}
-*/		
 	}
 	this.mNewModels = [];
 
@@ -136,96 +148,13 @@ GameonWorld.prototype.draw = function(gl) {
 		this.mAmbientLight[0], this.mAmbientLight[1],
 		this.mAmbientLight[2], this.mAmbientLight[3]);		
 	}
-	
-	//this.prepare(gl);
-/*
-	if (this.testModel == undefined)
+
+	for (var a =0 ; a< this.mDomains.length ; a++)
 	{
-		this.testModel = new GameonModel();
-		this.testModel.createPlane( -1.0, -1.0, 0, 1.0, 1.0, 0,this.mApp.colors().red );
-		this.testModel.generate(gl);
-		//var ref = new GameonModelRef();
-		//this.testModel.addref(ref);
-	}
-	
-	if (this.testModel != undefined)
-	{
-		//this.testModel.drawRef(gl );
-	}
-*/	
+		var domain = this.mDomains[a];
+		domain.draw(gl);
+	}	
 
-	
-	//gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-	//gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-
-	var len = this.mVisibleModelList.length;
-	
-	for (var a=0; a< len; a++) {
-		var model = this.mVisibleModelList[a];
-		if (!model.mHasAlpha)
-		{
-			model.draw(gl, GameonWorld_Display.WORLD);
-		}
-	}
-	for (var a=0; a < len ; a++) {
-		var model = this.mVisibleModelList[a];
-		if (model.mHasAlpha)
-		{
-			model.draw(gl, GameonWorld_Display.WORLD);
-		}
-	}
-
-	len = this.mVisibleModelList2.length;
-	for (var a=0; a< len; a++) {
-		var model = this.mVisibleModelList2[a];
-		if (!model.mHasAlpha)
-		{
-			model.draw(gl, GameonWorld_Display.WORLD);
-		}
-	}
-	for (var a=0; a < len ; a++) {
-		var model = this.mVisibleModelList2[a];
-		if (model.mHasAlpha)
-		{
-			model.draw(gl, GameonWorld_Display.WORLD);
-		}
-	}
-	
-	//gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-	this.mTexts.render(gl);
-}
-
-GameonWorld.prototype.drawHud = function(gl) {
-	
-	if (this.mLockedDraw) return;
-	var len = this.mVisibleModelList.length;
-	//gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-	/*
-	gl.mvMatrix.makeIdentity();
-	gl.mvpMatrix.load(gl.perspectiveMatrix);
-	gl.mvpMatrix.multiply(gl.mvMatrix);
-	gl.mvpMatrix.setUniform(gl, gl.u_modelViewProjMatrixLoc, false);
-	*/
-	//for (int a=0; a< len; a++) 
-	
-	for (var a=len-1; a>=0 ; a--)
-	{
-		var model = this.mVisibleModelList[a];
-		//if (model.mLoc == GameonWorld_Display.HUD && !mLockedDraw)
-		model.draw(gl, GameonWorld_Display.HUD);
-		if (this.mLockedDraw) return;
-	}
-	
-	len = this.mVisibleModelList2.length;
-	for (var a=len-1; a>=0 ; a--)
-	{
-		var model = this.mVisibleModelList2[a];
-		//if (model.mLoc == GameonWorld_Display.HUD && !mLockedDraw)
-			model.draw(gl, GameonWorld_Display.HUD);
-	}
-
-	//gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-	this.mTextsHud.render(gl);
 }
 
 GameonWorld.prototype.prepare = function(gl) {
@@ -234,13 +163,13 @@ GameonWorld.prototype.prepare = function(gl) {
 	//gl.glEnableClientState(gl.GL_COLOR_ARRAY);
 	//gl.glEnable( gl.GL_COLOR_MATERIAL);
 	//gl.glEnableClientState(gl.GL_VERTEX_ARRAY);	
+	
 	gl.enable(gl.CULL_FACE);
 	gl.frontFace(gl.CCW);
 	//gl.glEnable(gl.GL_TEXTURE_2D);
 	//gl.activeTexture(gl.GL_TEXTURE0);
 	 //gl.shadeModel(gl.GL_SMOOTH);
-	gl.hint(gl.PERSPECTIVE_CORRECTION_HINT,
-			gl.NICEST);
+	//gl.hint(gl.PERSPECTIVE_CORRECTION_HINT,gl.NICEST);
 
 			
 	gl.clearColor(0.0, 0.0, 0.0,1.0);
@@ -288,6 +217,12 @@ GameonWorld.prototype.clear = function() {
 	this.mLocked = false;
 	this.mLockedDraw = false;
 
+	for (var a =0 ; a< this.mDomains.length ; a++)
+	{
+		var domain = this.mDomains[a];
+		domain.clear();
+	}	
+	
 }
 
 GameonWorld.prototype.reinit = function() {
@@ -302,58 +237,6 @@ GameonWorld.prototype.reinit = function() {
 }
 
 
-GameonWorld.prototype.setVisible = function(model)
-{
-	if (model.mIsModel)
-	{
-		if (this.mVisibleModelList2.indexOf(model) < 0)
-		{
-		
-			for (var a=0; a< this.mVisibleModelList2.length; a++)
-			{
-				if (this.mVisibleModelList2[a].mTextureID == model.mTextureID)
-				{
-					this.mVisibleModelList2.splice(a,0,model);	
-					return;
-				}
-			}
-			this.mVisibleModelList2.push(model);	
-		}
-	}else
-	{
-		if (this.mVisibleModelList.indexOf(model) < 0)
-		{
-			for (var a=0; a< this.mVisibleModelList.length; a++)
-			{
-				if (this.mVisibleModelList[a].mTextureID == model.mTextureID)
-				{
-					this.mVisibleModelList.splice(a,0,model);	
-					return;
-				}
-			}		
-			this.mVisibleModelList.push(model);	
-		}		
-	}
-}
-
-GameonWorld.prototype.remVisible = function(model)
-{
-	if (model.mIsModel)
-	{
-		var i = this.mVisibleModelList2.indexOf(model);
-		if ( i >= 0)
-		{
-			this.mVisibleModelList2.splice(i,1);	
-		}
-	}else
-	{
-		var i = this.mVisibleModelList.indexOf(model);
-		if (i >= 0)
-		{
-			this.mVisibleModelList.splice(i,1);	
-		}		
-	}
-}	
 
 GameonWorld.prototype.drawSplash = function(gl) {
 	if (this.mSplashModel != undefined)
@@ -370,7 +253,7 @@ GameonWorld.prototype.drawSplash = function(gl) {
 		}	
 	
 		this.mSplashModel.setState(LayoutArea_State.VISIBLE);
-		this.mSplashModel.draw(gl, GameonWorld_Display.HUD);
+		this.mSplashModel.draw(gl, MAX_INTEGER);
 		this.mSplashModel.setState(LayoutArea_State.HIDDEN);
 	}
 	
@@ -406,17 +289,151 @@ GameonWorld.prototype.setAmbientLightGl = function( a , r, g, b, gl)
 	gl.uniform4f(gl.getUniformLocation(gl.program, "ambientL"), 
 			this.mAmbientLight[0], this.mAmbientLight[1],
 			this.mAmbientLight[2], this.mAmbientLight[3]);	
+			
 }
 
-GameonWorld.prototype.texts = function()
+GameonWorld.prototype.getDomain = function( id)
 {
-	return this.mTexts;
+	for (var a =0 ; a< this.mDomains.length ; a++)
+	{
+		var domain = this.mDomains[a];
+		if (domain.mRenderId == id)
+		{
+			return domain;
+		}
+	}
+	return undefined;
 }
 
-GameonWorld.prototype.textsHud = function()
+GameonWorld.prototype.getDomainByName = function(name)
 {
-	return this.mTextsHud;
+	for (var a =0 ; a< this.mDomains.length ; a++)
+	{
+		var domain = this.mDomains[a];
+		if (domain.mName == name)
+		{
+			return domain;
+		}
+	}
+	return undefined;
+}	
+
+GameonWorld.prototype.addDomain = function(name, i, visible) 
+{
+	for (var a =0 ; a< this.mDomains.length ; a++)
+	{
+		var domain = this.mDomains[a];
+		if (domain.mName == name || domain.mRenderId == i)
+		{
+			return undefined;
+		}
+	}
+	
+	var newdomain = new RenderDomain(name, this.mApp , this.mViewWidth, this.mViewHeight);
+	if (visible)
+	{
+		newdomain.show();
+	}
+	newdomain.mRenderId = i;
+	
+	var inserted = false;
+	for (var a =0 ; a< this.mDomains.length ; a++)
+	{
+		var old = this.mDomains[a];
+		if (old.mRenderId > i)
+		{
+			this.mDomains.splice(a, 0 ,newdomain);
+			inserted = true;
+			break;
+		}
+	}
+
+	if (!inserted)
+	{
+		this.mDomains.push(newdomain);
+	}
+	return newdomain;
 }
 
+
+GameonWorld.prototype.onSurfaceChanged = function(gl,width, height) 
+{
+	this.mViewWidth = width;
+	this.mViewHeight = height;
+	for (var a =0 ; a< this.mDomains.length ; a++)
+	{
+		var domain = this.mDomains[a];
+		domain.onSurfaceChanged(gl, width, height);
+	}
+}
+
+GameonWorld.prototype.onSurfaceCreated = function(gl)
+{
+	for (var a =0 ; a< this.mDomains.length ; a++)
+	{
+		var domain = this.mDomains[a];
+		domain.onSurfaceCreated(gl);
+	}
+}
+
+GameonWorld.prototype.domainCreate = function(name, id, coordsstr) 
+{
+	var domain = this.getDomainByName(name);
+	if (domain != undefined)
+	{
+		return;
+	}
 	
-	
+	var newdomain  = this.addDomain(name, parseInt(id), false);
+	if (newdomain != undefined && coordsstr != undefined && coordsstr.length > 0)
+	{
+		var coords = new Array(4);
+		ServerkoParse.parseFloatArray(coords, coordsstr);
+		newdomain.setBounds(this.mViewWidth, this.mViewHeight , coords);
+		
+		
+	}
+}
+
+GameonWorld.prototype.domainRemove = function(name) 
+{
+	var domain = this.getDomainByName(name);
+	if (domain != undefined)
+	{
+		domain.clear();
+		var i = this.mDomains.indexOf(domain);
+		if ( i >= 0)
+		{
+			this.mDomains.splice( i,1 );
+		}
+	}
+}
+
+GameonWorld.prototype.gerRelativeX = function(x) 
+{
+	return x/this.mViewWidth;
+}
+
+GameonWorld.prototype.gerRelativeY = function(y) 
+{
+	return y/this.mViewHeight;
+}
+
+GameonWorld.prototype.domainShow = function(name) 
+{
+	var domain = this.getDomainByName(name);
+	if (domain != undefined)
+	{
+		domain.show();
+	}
+}
+
+GameonWorld.prototype.domainHide = function(name) 
+{
+	var domain = this.getDomainByName(name);
+	if (domain != undefined)
+	{
+		domain.hide();
+	}		
+}
+

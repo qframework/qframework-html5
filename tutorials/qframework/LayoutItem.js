@@ -23,7 +23,7 @@ function LayoutItem( app)
     this.mType = GameonModelData_Type.NONE;
     this.mModel = undefined;
     this.mModelRef = undefined;
-    this.mModelRefOld = new GameonModelRef(undefined);
+    this.mModelRefOld = new GameonModelRef(undefined , 0);
 	this.mOwner = 0;
 	this.mOwnerMax = 0;
 
@@ -89,7 +89,7 @@ LayoutItem.prototype.setPosition = function(loc, x, y, z,
 	var copyref = false;
 	if (this.mModelRef == undefined) 
 	{
-		this.mModelRef = new GameonModelRef(this.mModel);
+		this.mModelRef = new GameonModelRef(this.mModel , loc);
 		this.mModelRef.mLoc = loc;
 		copyref = true;
 	} else {

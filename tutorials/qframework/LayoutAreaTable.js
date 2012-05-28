@@ -32,7 +32,7 @@ function LayoutAreaTable(subtype , app)
     this.mOwner = [];
     this.mParent =  undefined;
     this.mLayout = LayoutArea_Layout.NONE;
-    this.mDisplay = GameonWorld_Display.WORLD;
+    this.mDisplay = 0;
     this.mItemFields = [];
     this.mText = undefined;
     this.mData = undefined;
@@ -53,7 +53,7 @@ function LayoutAreaTable(subtype , app)
     this.mModelBack = undefined;
 
 	this.mSubType = LayoutAreaCards_SubType.NONE;
-	
+	this.mPsyData = undefined;
 	this.mColors = new Array(4);
 	this.mColors[0] = this.mApp.mColors.white;
 	this.mColors[1] = this.mApp.mColors.white;
@@ -320,16 +320,16 @@ LayoutAreaTable.prototype.createCustomModel = function()
 		}
 		
 		var div = this.mSizeW / this.mSize;
-		var ref = new GameonModelRef(undefined);
+		var ref = new GameonModelRef(undefined, this.mDisplay);
 		ref.mLoc = this.mDisplay;
 		var scrollpos = this.mScrollers[0] *div * 2;
 		if (this.mSubType == LayoutAreaTable_SubType.LIST)
 		{
-			model.createPlane( 0.43, -div/2, 0.01 ,  0.5,div/2 , 0.01, fcolor);
+			model.createPlane( 0.43, -div/2, 0.01 ,  0.5,div/2 , 0.01, fcolor , null);
 			ref.setPosition(0.0, - scrollpos * this.mBounds[1], 0.001);
 		}else
 		{
-			model.createPlane(  -div/2, 0.43,0.01 ,  div/2 , 0.5, 0.01, fcolor);
+			model.createPlane(  -div/2, 0.43,0.01 ,  div/2 , 0.5, 0.01, fcolor , null);
 			ref.setPosition( scrollpos * this.mBounds[0], 0.0,0.001);
 			
 		}

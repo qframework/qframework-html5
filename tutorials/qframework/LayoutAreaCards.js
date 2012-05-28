@@ -33,7 +33,7 @@ function LayoutAreaCards(subtype , app)
     this.mOwner = [];
     this.mParent =  undefined;
     this.mLayout = LayoutArea_Layout.NONE;
-    this.mDisplay = GameonWorld_Display.WORLD;
+    this.mDisplay = 0;
     this.mItemFields = [];
     this.mText = undefined;
     this.mData = undefined;
@@ -54,7 +54,7 @@ function LayoutAreaCards(subtype , app)
     this.mModelBack = undefined;
 
 	this.mSubType = LayoutAreaCards_SubType.NONE;
-	
+	this.mPsyData = undefined;
 	this.mColors = new Array(4);
 	this.mColors[0] = this.mApp.mColors.white;
 	this.mColors[1] = this.mApp.mColors.white;

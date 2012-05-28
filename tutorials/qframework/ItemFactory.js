@@ -94,54 +94,83 @@ ItemFactory.prototype.createCard52 = function(itemID, data, item) {
 }
 
 
-ItemFactory.prototype.newFromTemplate = function(strType, strData) {
-	var model = this.getFromTemplate(strType, strData);
+ItemFactory.prototype.newFromTemplate = function(strType, strData , strColor) {
+	var model = this.getFromTemplate(strType, strData, strColor);
 	if (model != undefined)
 	{
 		this.mModels[strType] = model;
 	}
 }
 
-ItemFactory.prototype.getFromTemplate = function(strType, strData) {
+ItemFactory.prototype.getFromTemplate = function(strType, strData, strColor) 
+{
 
     if (this.mModels[strData] != undefined)
     {
         return this.mModels[strData];
     }
-    
-	var model = new GameonModel(strData , this.mApp);
-	if (strData == "cube")
+
+	var textid = this.mApp.textures().mTextureDefault;
+	var color = undefined;
+	
+	if (strColor == undefined)
 	{
-		var model = this.createFromType(GameonModelData_Type.CUBE, this.mApp.mColors.white, this.mApp.mTextures.mTextureDefault);
+		color = this.mApp.colors().white;
+	}else
+	{
+		color = this.mApp.colors().getColor(strColor);
+	}
+	
+	var grid = [1,1,1];
+	
+	
+	var template = undefined;
+	var tok = strData.split(".");
+	if (tok.length == 1)
+	{
+		template = strData;
+	}else
+	{
+		template = tok[0];
+		grid[0] = parseFloat( tok[1]);
+		grid[1] = parseFloat( tok[2] );
+		grid[2] = parseFloat( tok[3] );
+	}
+	
+		
+	var model = new GameonModel(template , this.mApp);
+	if (template == "cube")
+	{
+		var model = this.createFromType(GameonModelData_Type.CUBE, color , textid , grid);
 		model.mModelTemplate = GameonModelData_Type.CUBE;
 		model.mIsModel = true;
 		return model;
 		
 	}else
-	if (strData == "sphere")
+	if (template == "sphere")
 	{
-		var model = this.createFromType(GameonModelData_Type.SPHERE, this.mApp.mColors.white, this.mApp.mTextures.mTextureDefault);
+		var model = this.createFromType(GameonModelData_Type.SPHERE, color , textid , grid);
 		model.mModelTemplate = GameonModelData_Type.SPHERE;
 		model.mIsModel = true;
 		return model;
 		
 	}		
-	if (strData == "cylinder")
+	if (template == "cylinder")
 	{
 		model.createModel(GameonModelData_Type.CYLINDER, TextureFactory.mTextureDefault);
 		model.mModelTemplate = GameonModelData_Type.SFIGURE;
 		model.mIsModel = true;
-	} else if (strData == "plane")
+	} else if (template == "plane")
 	{
 		model.createPlane(-0.5,-0.5,0.0,0.5, 0.5,0.0, this.mApp.mColors.white);
 		model.mModelTemplate = GameonModelData_Type.SFIGURE;
 		model.mIsModel = true;
-	} else if (strData == "dicemodel")
+	} else if (template == "dicemodel")
 	{
 		model.createModel(GameonModelData_Type.DICE, TextureFactory.mTextureDefault);
 		model.mModelTemplate = GameonModelData_Type.DICE;
 		model.mIsModel = true;
-	} else if (strData == "card52")
+	} else if (template == "card52")
 	{
 		model.createCard2(-0.5,-0.5,0.0,0.5, 0.5,0.0, this.mApp.mColors.transparent);
 		model.mModelTemplate = GameonModelData_Type.CARD52;
@@ -149,7 +178,7 @@ ItemFactory.prototype.getFromTemplate = function(strType, strData) {
 		model.mForcedOwner = 32;   
 		model.mHasAlpha = true;
 		model.mIsModel = true;
-	} else if (strData == "cardbela")
+	} else if (template == "cardbela")
 	{
 		model.createCard(-0.5,-0.5,0.0,0.5, 0.5,0.0, this.mApp.mColors.transparent);
 		model.mModelTemplate = GameonModelData_Type.CARD52;
@@ -157,9 +186,9 @@ ItemFactory.prototype.getFromTemplate = function(strType, strData) {
 		model.mForcedOwner = 32;   
 		model.mHasAlpha = true;
 		model.mIsModel = true;
-	}else if (strData == "background")
+	}else if (template == "background")
 	{
-		model.createPlane(-0.5,-0.5,0.0,0.5, 0.5,0.0, this.mApp.mColors.white);
+		model.createPlane(-0.5,-0.5,0.0,0.5, 0.5,0.0, color , grid);
 		model.mModelTemplate = GameonModelData_Type.BACKGROUND;
 		model.mHasAlpha = true;
 		model.mIsModel = false;
@@ -199,14 +228,21 @@ ItemFactory.prototype.setTexture = function(strType, strData) {
 	model.setTextureOffset(offsetx, offsety);
 }
 
-ItemFactory.prototype.createModel = function(strType, strData) {
+ItemFactory.prototype.createModel = function(strType, domainname) {
 	// get object
 	var model = this.mModels[strType];
 	if (model == undefined) {
 		return;
 	}
 	model.mIsModel = true;
-	this.mWorld.add(model);
+	var domain = this.mApp.world().getDomainByName(domainname);
+	if (domain != undefined)
+	{
+		this.mWorld.add(model);
+	}else
+	{
+		this.mWorld.add(model);
+	}	
 }	
 
 ItemFactory.prototype.setSubmodels = function(strType, strData) {
@@ -229,14 +265,14 @@ ItemFactory.prototype.setSubmodels = function(strType, strData) {
 	
 }		
 
-ItemFactory.prototype.createFromType = function(template, color, texture) 
+ItemFactory.prototype.createFromType = function(template, color, texture , grid) 
 {
     var model = new GameonModel("template" , this.mApp);
-    this.addModelFromType(model, template, color, texture);
+    this.addModelFromType(model, template, color, texture, grid);
     return model;
 }
 
-ItemFactory.prototype.addModelFromType = function(model, template, color, texture) 
+ItemFactory.prototype.addModelFromType = function(model, template, color, texture, grid) 
 {
 	if (template == GameonModelData_Type.SFIGURE)
 	{
@@ -245,12 +281,12 @@ ItemFactory.prototype.addModelFromType = function(model, template, color, textur
 		model.mIsModel = true;
 	} else if (template == GameonModelData_Type.CUBE)
 	{
-		model.createModel(GameonModelData_Type.CUBE, TextureFactory.mTextureDefault);
+		model.createModel(GameonModelData_Type.CUBE, TextureFactory.mTextureDefault, color, grid);
 		model.mModelTemplate = GameonModelData_Type.CUBE;
 		model.mIsModel = true;
 	} else if (template == GameonModelData_Type.SPHERE)
 	{
-		model.createModel(GameonModelData_Type.SPHERE, TextureFactory.mTextureDefault);
+		model.createModel(GameonModelData_Type.SPHERE, TextureFactory.mTextureDefault, color, grid);
 		model.mModelTemplate = GameonModelData_Type.SPHERE;
 		model.mIsModel = true;
 	}else if (template == GameonModelData_Type.CARD52)
@@ -263,7 +299,7 @@ ItemFactory.prototype.addModelFromType = function(model, template, color, textur
 		model.mIsModel = true;
 	} else if (template == GameonModelData_Type.BACKGROUND)
 	{
-		model.createPlane(-0.5,-0.5,0.0,0.5, 0.5,0.0, color);
+		model.createPlane(-0.5,-0.5,0.0,0.5, 0.5,0.0, color, grid);
 		model.mModelTemplate = GameonModelData_Type.BACKGROUND;
 		model.mForceHalfTexturing = false;
 		model.mHasAlpha = false;
@@ -297,6 +333,12 @@ ItemFactory.prototype.initModels = function(response)
 ItemFactory.prototype.processObject = function( objData) {
 	var name = objData["name"];
 	var template = objData["template"];
+	var color= null;
+	if (objData["color"] != undefined)
+	{
+		color= objData["color"];
+	}
+	
 	this.newFromTemplate(name , template);
 	
 	if (objData["texture"] != undefined)

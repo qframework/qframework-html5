@@ -19,7 +19,7 @@
 
 
 
-function GameonModelRef( parent ) 
+function GameonModelRef( parent , loc) 
 {
 	this.mStaticBounds =  [ 
 		-0.5,-0.5,0.0,1.0,
@@ -45,12 +45,18 @@ function GameonModelRef( parent )
     this.mVisible = false;
 	this.mEnabled = true;
 
-    this.mLoc = GameonWorld_Display.WORLD;
+    this.mLoc = 0;
 	this.mMatrix =  new J3DIMatrix4();
 
 	this.mAnimating = false;
     this.mAnimData = undefined;
+	this.mLoc = loc;
+	this.mPsyData = undefined;
+}
 
+GameonModelRef.prototype.loc = function()
+{
+	return this.mLoc;
 }
 
 GameonModelRef.prototype.clear = function()
@@ -81,6 +87,9 @@ GameonModelRef.prototype.clear = function()
 	
 	this.mTransformOwner = false;
 	this.mOwner = 0;
+	
+	this.mPsyData.mRef = undefined;
+	this.mPsyData = undefined;
 }
 
 GameonModelRef.prototype.setOwner = function(owner, ownerMax) 
@@ -449,4 +458,9 @@ GameonModelRef.prototype.animating =function()
 
 GameonModelRef.prototype.matrix = function() {
 	return this.mMatrix;
+}
+
+GameonModelRef.prototype.assignPsyData = function(bodydata)
+{
+	this.mPsyData = bodydata;
 }

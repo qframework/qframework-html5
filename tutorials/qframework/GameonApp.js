@@ -48,7 +48,8 @@ function GameonApp(context, appname)
     this.mSounds  = new SoundFactory();
     this.mSettings  = new Q_Settings(this);
     this.mObjectsFact  = new ObjectsFactory(this);
-    this.mCS  = new GameonCS();
+	this.mBox2dWrapper  = new Box2dWrapper(this);
+	
     this.mFrameDeltaTime = -1;
     this.mFrameLastTime = -1;
 
@@ -63,10 +64,17 @@ function GameonApp(context, appname)
     this.mLastDragTime = 0;
     this.mLastClickTime = 0;	
 	this.mLastDist = 0
+	
+	this.mTouchEnabled = true;
+    this.mOnTouchCallback = undefined;
+    this.mOnTouchEndCallback = undefined;
+    this.mOnTouchStartCallback = undefined;
+	
 }
 
 GameonApp.prototype.processData = function(gl , time)
 {
+	this.mBox2dWrapper.doFrame(this.mFrameDeltaTime);
     this.mAnims.process(time);
 	this.execResponses(gl);
     this.mWorld.addModels(gl);    
@@ -76,8 +84,9 @@ GameonApp.prototype.processData = function(gl , time)
 
 GameonApp.prototype.hasData = function()
 {
+	return true;
 	//System.out.println("to skip " + mResponsesQueue.size() + " " + mAnims.getCount());
-	if (this.mDrawSPlash)
+	if (this.mDrawSPlash || this.mBox2dWrapper.isActive())
 	{
 		return true;
 	}
@@ -102,12 +111,14 @@ GameonApp.prototype.hasData = function()
 	
 GameonApp.prototype.drawFrame = function (gl , time)
 {
+	//print(" frame "+ this.mFrameDeltaTime );	
 	if (this.mRendering)
 		return;
 	this.mRendering = true;
 	this.calcFrameDelay();
 	
 	this.gl = gl;
+	
 	this.processData(gl,this.mFrameDeltaTime);
 	//this.mView.onSurfaceChanged(gl , this.mScreenW, this.mScreenH);
 	if (this.mDrawSPlash)
@@ -139,8 +150,8 @@ GameonApp.prototype.drawFrame = function (gl , time)
 	
 	if (!this.mCameraSet)
 	{
-		this.mDataGrid.onCameraFit("fit", "4.0,0");
-		this.mDataGrid.onCameraFitHud("fit", "4.0,0");
+		this.mDataGrid.onCameraFit("fit", "4.0,0" , "world" );
+		this.mDataGrid.onCameraFit("fit", "4.0,0" , "hud");
 		this.mCameraSet = true;
 	}	
 	this.mRendering = false;
@@ -148,7 +159,7 @@ GameonApp.prototype.drawFrame = function (gl , time)
 	 
 GameonApp.prototype.surfaceChanged = function (gl,width, height)
 {
-	this.mCS.init(width, height,1);
+	//this.mCS.init(width, height,1);
 	this.mView.onSurfaceChanged(gl , width, height);
 	this.mView.onSurfaceCreated(gl , width, height);
 }
@@ -171,6 +182,10 @@ GameonApp.prototype.onJSONData = function(gl,jsonData)
 		for (var a=0; a< room.length; a++)
 		{
 			var roomobj = room[a];
+			if (roomobj == undefined)
+			{
+				continue;
+			}
 			var type = roomobj["res"];
 			if (type == "event")
 			{
@@ -191,6 +206,10 @@ GameonApp.prototype.onJSONData = function(gl,jsonData)
 			}else if (type == "animation"){
 				// onlayout
 				this.mAnims.initAnimation(roomobj);
+			}else if (type == "box2dobjs")
+			{
+				// onlayout
+				this.mBox2dWrapper.initObjects(roomobj);
 			}
 		}
 	  
@@ -256,11 +275,11 @@ GameonApp.prototype.start = function(script , preexec)
 	this.mScript.loadScript(script,100);
 }
 
-GameonApp.prototype.onClick = function(vec, vecHud) 
+GameonApp.prototype.onClick = function(x, y) 
 {
 	var delay = new Date().getTime() - this.mLastClickTime;
 
-	var field = this.mDataGrid.onClickNearest(vec, vecHud);
+	var field = this.mDataGrid.onClickNearest(x, y);
 	
 	if (field != undefined && field.mOnclick != undefined) {
 		// send data
@@ -314,12 +333,15 @@ GameonApp.prototype.init = function()
 
 GameonApp.prototype.setScreenBounds = function()
 {
-	this.mCS.getScreenBounds(this.mScreenb , this.mHudb);
+	var hud = this.mWorld.getDomainByName("hud");
+	var world = this.mWorld.getDomainByName("world");
+	hud.mCS.getScreenBounds(this.mHudb);
+	world.mCS.getScreenBounds(this.mScreenb);
 	
 	var script = "Q.layout.canvasw =";
-	script += this.mCS.getCanvasW(); 
+	script += world.mCS.getCanvasW(); 
 	script += ";Q.layout.canvash = ";
-	script += this.mCS.getCanvasH();
+	script += world.mCS.getCanvasH();
 	
 	script += ";Q.layout.worldxmin = ";
 	script += this.mScreenb[0];
@@ -398,13 +420,18 @@ GameonApp.prototype.goUrl = function(type , data)
 	//mEaglView.goUrl(type, data);
 }
 
-GameonApp.prototype.mouseClicked = function(x, y) {
-	var rayVec = [0.0,0.0,0.0];
-	var rayVecHud = [0.0,0.0,0.0];
-	this.mCS.screen2spaceVec(x , y, rayVec);
-	this.mCS.screen2spaceVecHud(x , y, rayVecHud);
-	this.onClick(rayVec , rayVecHud);
-	
+GameonApp.prototype.touchStart = function(x, y) 
+{
+	if (!this.mTouchEnabled)
+		return;    	
+	this.fireTouchEvent(1,x, y, 0);//rayVec , rayVecHud);
+}
+
+GameonApp.prototype.touchEnd = function(x, y, pressdelay) {
+	if (!this.mTouchEnabled)
+		return;    	
+	this.fireTouchEvent(2,x, y, pressdelay);//rayVec , rayVecHud);
+	this.onClick(x, y );//rayVec , rayVecHud);
 }
 
 
@@ -458,16 +485,10 @@ GameonApp.prototype.mouseDragged = function(x, y , notimecheck) {
 	{
 		//return;
 	}
+	this.fireTouchEvent(0,x, y, 0);
 	this.mLastDragTime = 0;
 	
-	var rayVec = [0.0,0.0,0.0];
-	var rayVecHud = [0.0,0.0,0.0];
-
-	this.mCS.screen2spaceVec(x , y, rayVec);
-	this.mCS.screen2spaceVecHud(x , y, rayVecHud);
-	//Log.d("model" , "coords " + spacecoords[0] + " " + spacecoords[1]);
-	
-	var field = this.mDataGrid.onDragNearest(rayVec , rayVecHud);
+	var field = this.mDataGrid.onDragNearest(x , y);
 	
 	if (field != undefined && this.mFocused != undefined)
 	{
@@ -636,7 +657,16 @@ GameonApp.prototype.onEvent2 = function(gl, response)
 		break;            
 		case 200:
 			this.setEnv(resptype, respdata);
-			break;			
+		break;			
+		case 201:
+			this.registerOnTouch(resptype , 0);
+		break;
+		case 202:
+			this.registerOnTouch(resptype , 1);
+		break;
+		case 203:
+			this.registerOnTouch(resptype , 2);
+		break;				
 		case 1002:
 			this.onTextInput(resptype , respdata);
 		break;
@@ -673,7 +703,7 @@ GameonApp.prototype.onEvent2 = function(gl, response)
 			this.mTextures.deleteTexture(gl ,resptype );
 		break;			
 		case 4100:
-			this.mObjectsFact.create(resptype , respdata);
+			this.mObjectsFact.create(resptype , respdata , respdata2 , respdata3);
 			break;
 		case 4110:
 			this.mObjectsFact.place(resptype , respdata);
@@ -712,7 +742,7 @@ GameonApp.prototype.onEvent2 = function(gl, response)
 		break;
 
         case 6001:
-              this.mItems.newFromTemplate(resptype, respdata);
+              this.mItems.newFromTemplate(resptype, respdata , undefined);
           break;
         case 6002:
               this.mItems.setTexture(resptype, respdata);
@@ -732,18 +762,39 @@ GameonApp.prototype.onEvent2 = function(gl, response)
         case 6007:
             this.mItems.addShapeFromData(resptype, respdata, respdata2 , respdata3);
             break;          
-	  case 7000:
-		  this.connect(resptype, respdata);
+		case 7000:
+			this.connect(resptype, respdata);
 		  break;            
-	  case 7001:
-		  this.join(resptype , respdata);
+		case 7001:
+			this.join(resptype , respdata);
 		  break;                        
-	  case 7002:
-		  this.send(resptype);
+		case 7002:
+			this.send(resptype);
 		  break;
-	  case 7003:
-		  this.disconnect();
+		case 7003:
+			this.disconnect();
 		  break;
+		case 7005:
+			this.get(resptype , respdata);
+			break;
+		case 8000:
+			this.mWorld.domainCreate(resptype , respdata , respdata2);
+			break;
+		case 8001:
+			this.mWorld.domainRemove(resptype);
+			break;
+		case 8002:
+			this.mWorld.domainShow(resptype);
+			break;
+		case 8003:
+			this.mWorld.domainHide(resptype);
+			break;    							
+		case 9000:
+			this.mBox2dWrapper.initWorld(resptype, respdata , respdata2);
+			break;
+		case 9001:
+			this.mBox2dWrapper.removeWorld(resptype);
+			break;		  
 		default:
 			this.mDataGrid.onEvent2(response);
 
@@ -823,4 +874,43 @@ GameonApp.prototype.view = function()
 
 GameonApp.prototype.frameDelta = function() {
 	return this.mFrameDeltaTime;
+
+}
+
+GameonApp.prototype.get = function(uri, callback)
+{
+	this.mScript.get(uri, callback);
+}
+
+GameonApp.prototype.registerOnTouch = function(resptype , type) {
+	if (type == 0)
+		this.mOnTouchCallback = resptype;
+	if (type == 1)
+		this.mOnTouchStartCallback = resptype;
+	if (type == 2)
+		this.mOnTouchEndCallback = resptype;    	
+}
+
+GameonApp.prototype.fireTouchEvent = function(type, x , y, delay)
+{
+	// 0 touch event
+	if (type == 0 && this.mOnTouchCallback != undefined && this.mOnTouchCallback.length > 0)
+	{
+		var data = this.mOnTouchCallback + "(" + this.mWorld.gerRelativeX(x) + ","+ this.mWorld.gerRelativeY(y)+ ");";
+		this.mScript.execScript(data , 0);        	        	        	
+	}
+	
+	// 1 touch start
+	if (type == 1 && this.mOnTouchStartCallback != undefined && this.mOnTouchStartCallback.length > 0 )
+	{
+		var data = this.mOnTouchStartCallback + "(" + this.mWorld.gerRelativeX(x) + ","+ this.mWorld.gerRelativeY(y)+ ");";
+		this.mScript.execScript(data , 0);        	        	
+	}
+	
+	// 2 touch end + delay        
+	if (type == 2 && this.mOnTouchEndCallback != undefined && this.mOnTouchEndCallback.length > 0)
+	{
+		var data = this.mOnTouchEndCallback + "(" + this.mWorld.gerRelativeX(x) + ","+ this.mWorld.gerRelativeY(y)+ ", " + delay+");";
+		this.mScript.execScript(data , 0);        	
+	}
 }

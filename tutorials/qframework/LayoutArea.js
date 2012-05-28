@@ -119,7 +119,7 @@ function LayoutArea()
     this.mOwner = [];
     this.mParent =  undefined;
     this.mLayout = LayoutArea_Layout.NONE;
-    this.mDisplay = GameonWorld_Display.WORLD;
+    this.mDisplay = 0;
     this.mItemFields = [];
     this.mText = undefined;
     this.mData = undefined;
@@ -146,6 +146,7 @@ function LayoutArea()
 	this.mColors[1] = this.mApp.colors().white;
 	this.mColors[2] = this.mApp.colors().white;
 	this.mColors[3] = this.mApp.colors().white;
+	this.mPsyData = undefined;
 */	
 
 }
@@ -211,14 +212,10 @@ LayoutArea.prototype.fieldSetItem  = function(index, itemID) {
 
 LayoutArea.prototype.updateDisplay  = function(strData) {
 	var style = strData;
-	var delay = 0;
-	var closeonclick = false;
-
-	if (style == "hud") {
-		this.mDisplay = GameonWorld_Display.HUD;
-	}else
+	var domain = this.mApp.world().getDomainByName(strData);
+	if (domain != undefined)
 	{
-		this.mDisplay = GameonWorld_Display.WORLD;	
+		this.mDisplay = domain.mRenderId;
 	}
 
 }
@@ -236,8 +233,15 @@ LayoutArea.prototype.findField  = function(x, y) {
 	return -1;
 }
 
-LayoutArea.prototype.clear = function(all) {
-	
+LayoutArea.prototype.clear = function(all) 
+{
+
+	if (this.mPsyData != undefined)
+	{
+		this.mPsyData.mArea = undefined;
+		this.mPsyData = undefined;
+	}
+		
 	if (this.mModelBack != undefined && all == true)
 	{
 		this.mApp.world().remove(this.mModelBack);
@@ -470,6 +474,17 @@ LayoutArea.prototype.updateLocation  = function(strData) {
 		this.mBounds[1] = this.mLocation[3];
 		this.mLocation[2] = 0.0;    		
 	}
+	this.updateModelsTransformation();
+}
+
+LayoutArea.prototype.move = function(strData) 
+{
+	var reldata = [0,0,0];
+	var num = ServerkoParse.parseFloatArray(reldata, strData);
+	this.mLocation[0] += reldata[0];
+	this.mLocation[1] += reldata[1];
+	this.mLocation[2] += reldata[2];
+
 	this.updateModelsTransformation();
 }
 
@@ -810,7 +825,7 @@ LayoutArea.prototype.updateItemsA  = function(strData) {
 LayoutArea.prototype.createWorldModel  = function() {
 	if (this.mModelBack == undefined) {
 		if (this.mColorBackground != undefined) {
-		    var ref = new GameonModelRef(undefined , this.mParent.getWorld() );
+		    var ref = new GameonModelRef(undefined , this.mDisplay );
 			// create plane for background
 			if (this.mStrColorBackground2 != undefined)
 			{
@@ -826,11 +841,11 @@ LayoutArea.prototype.createWorldModel  = function() {
 					if (this.mType == LayoutArea_Type.LAYOUT)
 					{
 						this.mModelBack = this.mApp.items().createFromType(GameonModelData_Type.BACKIMAGE , 
-							this.mColorBackground , text);					
+							this.mColorBackground , text , null);					
 					}else
 					{
 						this.mModelBack = this.mApp.items().createFromType(GameonModelData_Type.BACKGROUND , 
-							this.mColorBackground , text);
+							this.mColorBackground , text , null);
 					}
 					ref.mOwner = n;
 					ref.mTransformOwner = true;
@@ -842,12 +857,12 @@ LayoutArea.prototype.createWorldModel  = function() {
 					if (this.mType == LayoutArea_Type.LAYOUT)
 					{
 						this.mModelBack = this.mApp.items().createFromType(GameonModelData_Type.BACKIMAGE , 
-							this.mColorBackground , this.mColorBackground2);					
+							this.mColorBackground , this.mColorBackground2 , null);					
 					}else
 					{
 				
 						this.mModelBack = this.mApp.items().createFromType(GameonModelData_Type.BACKGROUND , 
-							this.mColorBackground , this.mColorBackground2);
+							this.mColorBackground , this.mColorBackground2 , null);
 					}
 				}
 			}else
@@ -855,17 +870,17 @@ LayoutArea.prototype.createWorldModel  = function() {
 					if (this.mType == LayoutArea_Type.LAYOUT)
 					{
 						this.mModelBack = this.mApp.items().createFromType(GameonModelData_Type.BACKIMAGE , 
-								this.mColorBackground , this.mColorBackground2);					
+								this.mColorBackground , this.mColorBackground2 , null);					
 					}else
 					{
 			
 						this.mModelBack = this.mApp.items().createFromType(GameonModelData_Type.BACKGROUND , 
-								this.mColorBackground , this.mColorBackground2);
+								this.mColorBackground , this.mColorBackground2 , null);
 					}
 			}
 			
 			
-			this.mModelBack.mLoc = this.mDisplay;
+			//this.mModelBack.mLoc = this.mDisplay;
 			this.mModelBack.mEnabled = true;
 			
 			if (this.mColorBackground.alpha < 255)
@@ -894,7 +909,7 @@ LayoutArea.prototype.createWorldModel  = function() {
 
 LayoutArea.prototype.createWorldModelItems  = function()
 {
-	if ( this.mItemFields.length == 0 || this.mModel != null)
+	if ( this.mItemFields.length == 0 || this.mModel != undefined)
 	{
 		return;
 	}
@@ -946,7 +961,7 @@ LayoutArea.prototype.createWorldModelItems  = function()
 			case LayoutField_FieldType.NORM_FIELD:
 				if (this.mColorForeground != undefined)
 				{					
-					model.createPlane( x, y, z+up ,  x +w , y + h, z+up  ,   fcolor);	                	
+					model.createPlane( x, y, z+up ,  x +w , y + h, z+up  ,   fcolor , null);	                	
 				}
 				else
 				{
@@ -964,7 +979,7 @@ LayoutArea.prototype.createWorldModelItems  = function()
 			break;
 			case LayoutField_FieldType.PLAYER_START:
 				//model.createPlane2( x, y, this.mZ+0.001 ,  x +w , y + h, this.mZ+0.001  ,   fcolor);
-				model.createPlane( x+dw, y+dh, z+up ,  x +w-dw-dw , y + h-dh-dh, z+up ,   fcolor);
+				model.createPlane( x+dw, y+dh, z+up ,  x +w-dw-dw , y + h-dh-dh, z+up ,   fcolor , null);
 
 				break;				
 			case LayoutField_FieldType.PLAYER_END:
@@ -980,7 +995,7 @@ LayoutArea.prototype.createWorldModelItems  = function()
 
 		//Log.d("model", (field.mY) +" "+ (y));
 	}
-	var ref = new GameonModelRef(undefined);
+	var ref = new GameonModelRef(undefined , this.mDisplay);
 	ref.mLoc = this.mDisplay;
 	ref.setScale(this.mBounds);
 	model.addref(ref);    
@@ -990,9 +1005,16 @@ LayoutArea.prototype.createWorldModelItems  = function()
 	{
 		this.mModel.setTexture(this.mColorForeground2);
 	}
-	this.mApp.world().add(model);
+	this.mApp.world().add(this.mModel);
 }
 
+LayoutArea.prototype.distToCenter = function(coords)
+{
+	var x= this.mLocation[0] - coords[0];
+	var y= this.mLocation[1] - coords[1];
+	var z= this.mLocation[2] - coords[2];
+	return Math.sqrt(x*x+y*y+z*z);
+}
 
 LayoutArea.prototype.fieldClicked  = function(eye, ray) {
 	if (!this.hasTouchEvent() )
@@ -1000,7 +1022,7 @@ LayoutArea.prototype.fieldClicked  = function(eye, ray) {
 
 	if (this.mPageVisible == false || this.mState != LayoutArea_State.VISIBLE)
 	{
-		return null;
+		return undefined;
 	}
 		
 	var mindist = 1e06;
@@ -1009,10 +1031,19 @@ LayoutArea.prototype.fieldClicked  = function(eye, ray) {
 	for (var a=0; a < this.mItemFields.length; a++)
 	{
 		var f = this.mItemFields[a];
+		if (!f.mActive)
+		{
+			continue;
+		}
+		
 		if (f.mText != undefined || f.mItem != undefined)
 		{		
 			var ref = f.mRef;
 			var dist = ref.intersectsRay(eye, ray,loc);
+			if (dist >=0 && dist < 1e06)
+			{
+				dist = f.distToCenter(loc);
+			}			
 			if (dist <= mindist)
 			{
 				mindist = dist;
@@ -1032,33 +1063,7 @@ LayoutArea.prototype.fieldClicked  = function(eye, ray) {
 		pair.mLoc[0] = loc[0];
 		pair.mLoc[1] = loc[1];
 		pair.mLoc[2] = loc[2];		
-		return pair;							
-	}
-	
-	for (var a=0; a < this.mItemFields.length; a++)
-	{
-		var f = this.mItemFields[a];
-		var ref = f.mRef;
-		var dist = ref.intersectsRay(eye, ray , loc);
-		if (dist < mindist)
-		{
-			mindist = dist;
-			index = a;
-		}
-
-	}		
-	
-	if (mindist != 1e6)
-	{
-		var pair = new AreaIndexPair();
-		pair.mArea = this.mID;
-		pair.mOnclick = this.mOnclick;
-		pair.mOnFocusLost = this.mOnFocusLost;
-		pair.mOnFocusGain = this.mOnFocusGain;
-		pair.mIndex = index;
-		pair.mLoc[0] = loc[0];
-		pair.mLoc[1] = loc[1];
-		pair.mLoc[2] = loc[2];		
+		pair.mDist = mindist;
 		return pair;							
 	}
 	
@@ -1066,6 +1071,10 @@ LayoutArea.prototype.fieldClicked  = function(eye, ray) {
 	{
 		var ref = this.mModelBack.ref(0);
 		var dist = ref.intersectsRay(eye,ray , loc);
+		if (dist >=0 && dist < 1e06)
+		{
+			dist = this.distToCenter(loc);
+		}					
 		if (dist <= mindist)
 		{
 			mindist = dist;
@@ -1076,6 +1085,10 @@ LayoutArea.prototype.fieldClicked  = function(eye, ray) {
 	{
 		var ref = this.mModel.ref(0);
 		var dist = ref.intersectsRay(eye,ray,loc);
+		if (dist >=0 && dist < 1e06)
+		{
+			dist = this.distToCenter(loc);
+		}					
 		if (dist <= mindist)
 		{
 			mindist = dist;
@@ -1092,7 +1105,8 @@ LayoutArea.prototype.fieldClicked  = function(eye, ray) {
 		pair.mIndex = index;
 		pair.mLoc[0] = loc[0];
 		pair.mLoc[1] = loc[1];
-		pair.mLoc[2] = loc[2];		
+		pair.mLoc[2] = loc[2];
+		pair.mDist = mindist;		
 		return pair;							
 	}
 			
@@ -1274,6 +1288,11 @@ LayoutArea.prototype.updateColors = function(strData)
 
 LayoutArea.prototype.updateModelsTransformation = function()
 {
+	if (this.mID == "temparea4")
+	{
+		this.mID = "temparea4";
+	}
+
 	if (this.mModelBack != undefined)
 	{
 		var ref = this.mModelBack.ref(0);
@@ -1397,4 +1416,10 @@ LayoutArea.prototype.anim = function(type, delay, data)
 		var field = this.mItemFields[a];
 		field.createAnim(type, delay , data );
 	}
+}
+
+LayoutArea.prototype.assignPsyData = function(bodydata) 
+{
+	// 
+	this.mPsyData =  bodydata;
 }
