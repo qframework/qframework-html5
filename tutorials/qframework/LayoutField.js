@@ -280,7 +280,7 @@ LayoutField.prototype.setScale = function()
 {
 	if (this.mItem != undefined && this.mItem.mModelRef != undefined)
 	{
-		this.mItem.mModelRef.setScale(this.mW,this.mH,1);
+		this.mItem.mModelRef.setScale(this.mW,this.mH,this.mW);
 	}
 	if (this.mText != undefined)
 	{
@@ -288,7 +288,7 @@ LayoutField.prototype.setScale = function()
 	}
 	if (this.mRef != undefined)
 	{
-		this.mRef.setScale(this.mW,this.mH,1);
+		this.mRef.setScale(this.mW,this.mH,this.mW);
 	}
 }
 	

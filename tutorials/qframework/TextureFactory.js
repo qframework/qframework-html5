@@ -29,6 +29,75 @@ function StringString()
 		FONT:1
 	}
 
+function TextureFactory_MaterialData(texturef)
+{
+	this.mTextFact = texturef;
+	this.ambient = 1.0;
+	this.diffuse = 1.0;
+	this.alpha = 1.0;
+	this.ambientMap = undefined;
+	this.diffuseMap = undefined;
+	this.ambientMapId = this.mTextFact.get(TextureFactory_Type.DEFAULT);
+	this.diffuseMapId = this.mTextFact.get(TextureFactory_Type.DEFAULT);
+	this.t = undefined;
+}
+
+TextureFactory_MaterialData.prototype.setDiffuseMap = function(gl,folder, data) 
+{
+	this.diffuseMap = data;
+	var textname = data;
+	var textfile = folder + data;
+	this.diffuseMapId = this.mTextFact.newTexture(gl, textname, textfile, true);
+}
+
+TextureFactory_MaterialData.prototype.setAmbientMap = function(gl,folder, data) 
+{
+	this.ambientMap = data;
+	var textname = data;
+	var textfile = folder +  data;
+	this.ambientMapId = this.mTextFact.newTexture(gl, textname, textfile, true);
+}
+
+TextureFactory_MaterialData.prototype.setAlpha = function(data) 
+{
+	// 
+	this.alpha = parseFloat(data);
+}
+
+TextureFactory_MaterialData.prototype.setAlpha2 = function(data) 
+{
+	// 
+	this.alpha = 1.0-parseFloat(data);
+}
+
+TextureFactory_MaterialData.prototype.setDiffuse = function(data) 
+{
+	var difdata = ServerkoParse.parseFloatArray2(data);
+	this.diffuse = new GLColor(
+			difdata[0], 
+			difdata[1], 
+			difdata[2],
+			this.alpha);
+	
+}
+
+TextureFactory_MaterialData.prototype.setAmbient = function(data) 
+{
+	var ambdata = ServerkoParse.parseFloatArray2(data);
+	this.ambient= new GLColor(
+			ambdata[0], 
+			ambdata[1], 
+			ambdata[2],
+			this.alpha);			
+}
+
+TextureFactory_MaterialData.prototype.setTransform = function(data)
+{
+	this.t = ServerkoParse.parseFloatArray2(data);
+}
+
+	
+
 function TextureFactory( app) 
 {
     
@@ -45,6 +114,7 @@ function TextureFactory( app)
 	this.mV2 = 0.0;
 	this.mCp = 0.0;
 
+	this.mMaterials = {};
 }
 
 TextureFactory.prototype.init = function(gl) {
@@ -177,7 +247,8 @@ TextureFactory.prototype.newTexture = function(gl,textname , textfile, add)
 	{
 		//System.out.println("cant load " + textname);
 	}
-	
+
+	return texture;
 }
 
 TextureFactory.prototype.setParam = function( u1,v1,u2,v2, cp)
@@ -208,5 +279,62 @@ TextureFactory.prototype.processTexture = function( objData) {
 	this.newTexture(gl,name , file , true);
 	
 
+}
+
+TextureFactory.prototype.loadMaterial = function (gl, folder, fname)
+{
+	// 
+	var objstr = this.mApp.getStringFromFile(folder + fname);
+	var tok = objstr.split("\n");
+	var current = undefined;
+	
+	for (var a=0; a< tok.length; a++)
+	{		
+		var line = tok[a];
+		line = line.replace("\r", "");
+		line = line.replace("\t", "");
+		if (line.indexOf("#") == 0)
+		{
+			continue;
+		}else
+		if (line.indexOf("newmtl") == 0)
+		{
+			current = new TextureFactory_MaterialData(this);
+			this.mMaterials[line.substring(7)] = current;
+		}else				
+		if (line.indexOf("Ka") == 0)
+		{
+			current.setAmbient(line.substring(3));
+		}else
+		if (line.indexOf("Kd") == 0)
+		{
+			current.setDiffuse(line.substring(3));
+		}else
+		if (line.indexOf("d ") == 0)
+		{
+			current.setAlpha(line.substring(2));
+		}else
+		if (line.indexOf("Tr") == 0)
+		{
+			current.setAlpha2(line.substring(2));
+		}else
+		if (line.indexOf("map_Ka") == 0)
+		{
+			current.setAmbientMap(gl,folder, line.substring(7));
+		}else
+		if (line.indexOf("map_Kd") == 0)
+		{
+			current.setDiffuseMap(gl,folder, line.substring(7));
+		}else
+		if (line.indexOf("t ") == 0)
+		{
+			current.setTransform(line.substring(2));
+		}
+	}
+}
+
+TextureFactory.prototype.getMaterial = function(substring) 
+{
+	return this.mMaterials[substring];
 }
 

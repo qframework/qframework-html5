@@ -99,7 +99,7 @@ function LayoutAreaCards(subtype , app)
 	this.mHasScrollV = false;
 	this.mScollerAnim = undefined;
 	this.mActiveItems = 1;
-	
+	this.mBorderWidth= 0.03;	
 }
 
 LayoutAreaCards.prototype = new LayoutArea();

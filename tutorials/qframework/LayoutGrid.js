@@ -523,9 +523,13 @@ LayoutGrid.prototype.onEvent2 = function(response)
 		case 2502:
 			this.onCameraProj(resptype , respdata ,respdata2, respdata3);
 			break;         
-		 case 3001:
+		case 2504:
+			this.onCameraMove(resptype , respdata, respdata2, respdata3);
+		break;		    
+			
+		case 3001:
 			  this.onAreaDelete(resptype, respdata);
-		 break;				    
+		break;				    
 		case 3002:
 			  this.onAreaClear(resptype, respdata, true);
 		break;
@@ -960,6 +964,28 @@ LayoutGrid.prototype.onCameraSet = function(lookAt , eyeStr , domainid)
 	}
 }
 
+LayoutGrid.prototype.onCameraMove = function(lookAt , eyeStr , domainid , delay)
+{
+	
+	var tok = lookAt.split( ","); 
+	var lookat = new Array(3);
+	if (tok.length > 0) lookat[0] = parseFloat( tok[0]);
+	if (tok.length > 1) lookat[1] = parseFloat( tok[1]);
+	if (tok.length > 2) lookat[2] = parseFloat( tok[2]);
+		
+	var tok2 =  eyeStr.split(","); 
+	var eye = Array(3);
+	if (tok2.length > 0) eye[0] = parseFloat( tok2[0]);
+	if (tok2.length > 1) eye[1] = parseFloat( tok2[1]);
+	if (tok2.length > 2) eye[2] = parseFloat( tok2[2]);
+
+	var domain = this.mApp.world().getDomainByName(domainid);
+	if (domain != undefined)
+	{		
+		var animdelay = parseInt(delay);
+		domain.mCS.moveCamera(lookat, eye, animdelay);
+	}
+}
 
 
 LayoutGrid.prototype.onCameraProj = function(fov , far , near , domainid)

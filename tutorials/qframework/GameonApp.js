@@ -69,7 +69,7 @@ function GameonApp(context, appname)
     this.mOnTouchCallback = undefined;
     this.mOnTouchEndCallback = undefined;
     this.mOnTouchStartCallback = undefined;
-	
+	this.mRenderThisFrame = false;
 }
 
 GameonApp.prototype.processData = function(gl , time)
@@ -84,7 +84,12 @@ GameonApp.prototype.processData = function(gl , time)
 
 GameonApp.prototype.hasData = function()
 {
-	return true;
+//	return true;
+	if (this.mRenderThisFrame)
+	{
+		this.mRenderThisFrame = false;
+		return true;
+	}
 	//System.out.println("to skip " + mResponsesQueue.size() + " " + mAnims.getCount());
 	if (this.mDrawSPlash || this.mBox2dWrapper.isActive())
 	{
@@ -145,7 +150,7 @@ GameonApp.prototype.drawFrame = function (gl , time)
 		}
 	}	else
 	{
-		this.mView.onDrawFrame(gl);
+		this.mView.onDrawFrame(gl , this.mFrameDeltaTime);
 	}
 	
 	if (!this.mCameraSet)
@@ -280,6 +285,10 @@ GameonApp.prototype.onClick = function(x, y)
 	var delay = new Date().getTime() - this.mLastClickTime;
 
 	var field = this.mDataGrid.onClickNearest(x, y);
+	if (field == undefined)
+	{
+		field = this.mWorld.onTouchModel(x,y,true);
+	}	
 	
 	if (field != undefined && field.mOnclick != undefined) {
 		// send data
@@ -293,7 +302,14 @@ GameonApp.prototype.onClick = function(x, y)
 			}else
 			{
 				var cmd  = datastr.substring(3);
-				cmd += "('" + field.mArea + "',"+ field.mIndex;
+				if (field.mAlias == undefined)
+				{
+					cmd += "('" + field.mArea + "',"+ field.mIndex;
+				}else
+				{
+					cmd += "('" + field.mArea + "',"+ field.mIndex+",'" + field.mAlias + "'" ;
+				}
+				
 				cmd += "," + delay + ",[" + field.mLoc[0] + "," + field.mLoc[1] + "," + field.mLoc[2] + "]"; 
 				cmd += ","+ this.mLastDist;
 				cmd += ");" ;
@@ -427,11 +443,15 @@ GameonApp.prototype.touchStart = function(x, y)
 	this.fireTouchEvent(1,x, y, 0);//rayVec , rayVecHud);
 }
 
-GameonApp.prototype.touchEnd = function(x, y, pressdelay) {
+GameonApp.prototype.touchEnd = function(x, y, pressdelay , dotouch) {
 	if (!this.mTouchEnabled)
 		return;    	
-	this.fireTouchEvent(2,x, y, pressdelay);//rayVec , rayVecHud);
-	this.onClick(x, y );//rayVec , rayVecHud);
+	if (dotouch)
+	{
+		this.fireTouchEvent(2,x, y, pressdelay);//rayVec , rayVecHud);
+	}
+	this.onClick(x, y );
+	this.mWorld.resetDomainPan();
 }
 
 
@@ -476,6 +496,9 @@ GameonApp.prototype.stop = function()
 
 GameonApp.prototype.mouseDragged = function(x, y , notimecheck) {
 	// 
+	if (!this.mTouchEnabled)
+		return false;    	
+	
 	if (this.mFrameDeltaTime == 0)
 		this.mLastDragTime += 100;
 	else
@@ -489,6 +512,10 @@ GameonApp.prototype.mouseDragged = function(x, y , notimecheck) {
 	this.mLastDragTime = 0;
 	
 	var field = this.mDataGrid.onDragNearest(x , y);
+	if (field == undefined)
+	{
+		field = this.mWorld.onTouchModel(x,y,false);
+	}
 	
 	if (field != undefined && this.mFocused != undefined)
 	{
@@ -499,7 +526,7 @@ GameonApp.prototype.mouseDragged = function(x, y , notimecheck) {
 				this.mLastDrag[0] = field.mLoc[0];
 				this.mLastDrag[1] = field.mLoc[1];
 				this.mLastDrag[2] = field.mLoc[2];
-				return;
+				return true;
 			}else
 			{
 				var delta0 = field.mLoc[0]- this.mLastDrag[0];
@@ -524,7 +551,7 @@ GameonApp.prototype.mouseDragged = function(x, y , notimecheck) {
 		if (field.mArea ==  this.mFocused.mArea && 
 			field.mIndex == this.mFocused.mIndex)
 		{
-			return;
+			return true;
 		}else
 		{
 			this.onFocusLost(this.mFocused);
@@ -543,7 +570,23 @@ GameonApp.prototype.mouseDragged = function(x, y , notimecheck) {
 		this.onFocusGain(field);
 	}
 
-	this.mLastDrag[0] = 1e07;
+	if (field == undefined)
+	{
+		if (this.mWorld.panDomain(x, y))
+		{
+			this.mRenderThisFrame = true;
+		}
+	}
+
+	this.mLastDrag[0] = 1e07;    	
+	if (field != null)
+	{
+		return true;
+	}else
+	{
+		return false;
+	}
+
 }
 
 
@@ -561,6 +604,14 @@ GameonApp.prototype.onFocusGain = function(field)
 		}else
 		{			
 			var cmd  = datastr.substring(3);
+			if (field.mAlias == undefined)
+			{
+				cmd += "('" + field.mArea + "',"+ field.mIndex+ ");" ;
+			}else
+			{				
+				cmd += "('" + field.mArea + "',"+ field.mIndex + ");" ;
+			}
+			
 			cmd += "('" + field.mArea + "',"+ field.mIndex + ");" ;
 			this.mScript.execScript(cmd);
 		}
@@ -589,7 +640,14 @@ GameonApp.prototype.onFocusLost = function(field)
 		}else
 		{			
 			var cmd  = datastr.substring(3);
-			cmd += "('" + field.mArea + "',"+ field.mIndex + ");" ;
+			if (field.mAlias == undefined)
+			{
+				cmd += "('" + field.mArea + "',"+ field.mIndex + ");" ;
+			}else
+			{				
+				cmd += "('" + field.mArea + "',"+ field.mIndex + ");" ;
+			}
+
 			this.mScript.execScript(cmd);
 		}
 	}else
@@ -604,7 +662,7 @@ GameonApp.prototype.onFocusLost = function(field)
 GameonApp.prototype.onFocusProbe = function(x, y)
 {
 	this.mLastClickTime = new Date().getTime();
-	this.mouseDragged(x, y , true);
+	return this.mouseDragged(x, y , true);
 }
 
 GameonApp.prototype.setSplash  = function( splash, delay)
@@ -706,7 +764,7 @@ GameonApp.prototype.onEvent2 = function(gl, response)
 			this.mObjectsFact.create(resptype , respdata , respdata2 , respdata3);
 			break;
 		case 4110:
-			this.mObjectsFact.place(resptype , respdata);
+			this.mObjectsFact.place(resptype , respdata , respdata2);
 			break;
 		case 4120:
 			this.mObjectsFact.scale(resptype , respdata);
@@ -762,6 +820,9 @@ GameonApp.prototype.onEvent2 = function(gl, response)
         case 6007:
             this.mItems.addShapeFromData(resptype, respdata, respdata2 , respdata3);
             break;          
+        case 6008:
+            this.mItems.createModelFromFile(gl , resptype, respdata);
+            break;          			
 		case 7000:
 			this.connect(resptype, respdata);
 		  break;            
@@ -789,12 +850,19 @@ GameonApp.prototype.onEvent2 = function(gl, response)
 		case 8003:
 			this.mWorld.domainHide(resptype);
 			break;    							
+		case 8004:
+			this.mWorld.domainPan(resptype,respdata, respdata2, respdata3);
+			break;			
 		case 9000:
 			this.mBox2dWrapper.initWorld(resptype, respdata , respdata2);
 			break;
 		case 9001:
 			this.mBox2dWrapper.removeWorld(resptype);
 			break;		  
+								
+		case 4300:
+			this.mAnims.animObject(resptype,respdata,respdata2,respdata3,undefined);
+
 		default:
 			this.mDataGrid.onEvent2(response);
 
@@ -913,4 +981,14 @@ GameonApp.prototype.fireTouchEvent = function(type, x , y, delay)
 		var data = this.mOnTouchEndCallback + "(" + this.mWorld.gerRelativeX(x) + ","+ this.mWorld.gerRelativeY(y)+ ", " + delay+");";
 		this.mScript.execScript(data , 0);        	
 	}
+}
+
+
+GameonApp.prototype.getStringFromFile = function(filePath)
+{
+	var xmlhttp=new XMLHttpRequest();
+	xmlhttp.open("GET","res/"+filePath,false);
+	xmlhttp.send();
+	var result = xmlhttp.responseText;
+	return result;
 }

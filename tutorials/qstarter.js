@@ -48,7 +48,6 @@ function QStarter()
 	this.leftCoord = 0;
 	this.lastTime = new Date().getTime();
 	this.lastTime2 = new Date().getTime();
-	
 	this.start = function()
 	{
 		gl = initWebGL(
@@ -76,6 +75,7 @@ function QStarter()
 		gl.enableVertexAttribArray(2);
 		
 		this.dragging = false;
+		this.clicked = false;
 		this.mApp.init();
 		
 		var c = document.getElementById("qappcanvas");		
@@ -88,16 +88,20 @@ function QStarter()
 		var pressdelay = new Date().getTime() - this.mPressStart;
 		qstart.mApp.touchEnd(getPositionX(event), getPositionY(event) , pressdelay);
 		qstart.dragging = false;
+		qstart.clicked = false;
 	}
 	
 	this.handleMouseDown = function (event) {
-		qstart.dragging = true;
+		qstart.clicked = true;
 		this.mPressStart = new Date().getTime();
-		qstart.mApp.onFocusProbe(getPositionX(event), getPositionY(event));
-		qstart.mApp.touchStart(getPositionX(event), getPositionY(event) );
+		if (!qstart.mApp.onFocusProbe(getPositionX(event), getPositionY(event)))
+		{
+			qstart.dragging = true;
+			qstart.mApp.touchStart(getPositionX(event), getPositionY(event) );
+		}
 	}
 	this.handleMouseMove = function (event) {
-		if (qstart.dragging) {
+		if (qstart.clicked) {
 			qstart.mApp.mouseDragged(getPositionX(event), getPositionY(event) , false);
 		}		
 	}

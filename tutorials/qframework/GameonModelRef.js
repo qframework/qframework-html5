@@ -52,6 +52,7 @@ function GameonModelRef( parent , loc)
     this.mAnimData = undefined;
 	this.mLoc = loc;
 	this.mPsyData = undefined;
+	this.mRefAlias = undefined;	
 }
 
 GameonModelRef.prototype.loc = function()
@@ -351,9 +352,17 @@ GameonModelRef.prototype.setVisible = function(visible)
 		if (this.mParent != undefined)this.mParent.remVisibleRef(this);
 		if (this.mAnimating && this.mAnimData != undefined)
 		{
-			this.mAnimData.cancelAnimation(this);
-			this.mAnimating = false;
+			this.cancelAnimation();
 		}		
+	}
+}
+
+GameonModelRef.prototype.cancelAnimation = function()
+{
+	if (this.mAnimating && this.mAnimData != undefined)
+	{
+		this.mAnimData.cancelAnimation(this);
+		this.mAnimating = false;
 	}
 }
 
@@ -463,4 +472,47 @@ GameonModelRef.prototype.matrix = function() {
 GameonModelRef.prototype.assignPsyData = function(bodydata)
 {
 	this.mPsyData = bodydata;
+}
+
+GameonModelRef.prototype.copyData = function(source)
+{
+	for (var a=0; a< 3; a++)
+	{
+		this.mAreaPosition[a] = source.mAreaPosition[a];
+		this.mAreaRotation[a] = source.mAreaRotation[a];
+		this.mPosition[a] = source.mPosition[a];
+		this.mRotation[a] = source.mRotation[a];
+		this.mScale[a] = source.mScale[a];
+		this.mScaleAdd[a] = source.mScaleAdd[a];		
+	}
+	
+	this.mOwner = source.mOwner;
+	this.mOwnerMax= source.mOwnerMax;
+	this.mTransformOwner = source.mTransformOwner;
+	
+}
+
+GameonModelRef.prototype.resizeMatrices = function(size)
+{
+	this.mAreaPosition = [0,0,0,0];
+	this.mAreaRotation = [0,0,0,0];
+	this.mPosition = [0,0,0,0];
+	this.mRotation = [0,0,0,0];
+	this.mScale = [0,0,0,0];
+	this.mScaleAdd = [0,0,0,0];
+	
+}
+
+GameonModelRef.prototype.distToCenter = function(loc) 
+{
+	var dist = Math.sqrt(( 
+			(loc[0] - this.mMatrix[12])*
+			(loc[0] - this.mMatrix[12]) +
+			(loc[1] - this.mMatrix[13])*
+			(loc[1] - this.mMatrix[13]))+
+			(loc[2] - this.mMatrix[14])*
+			(loc[2] - this.mMatrix[14]));
+	return dist;
+
+
 }

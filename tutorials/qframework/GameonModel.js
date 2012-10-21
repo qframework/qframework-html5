@@ -17,7 +17,14 @@
    Should be used for peace, not war :)   
 */
 
-function GameonModel(name , app)
+function GameonModel_RefId()
+{
+	this.name = undefined;
+	this.alias = undefined;
+	this.id = undefined;
+}
+
+function GameonModel(name , app , parentarea)
 {
 	this.mName = name
     //GLVertex	mPosition;
@@ -31,8 +38,6 @@ function GameonModel(name , app)
 	this.mWorld = app.mWorld;
 
 	this.mName = "";
-	this.mBBoxMin = new Array(3);
-	this.mBBoxMax = new Array(3);
 	
 	this.mTextureOffset = 0;
 	this.mTextureW = 1;
@@ -54,8 +59,8 @@ function GameonModel(name , app)
     this.mTextureBuffer = undefined;
     this.mTextureID = this.mApp.textures().get(TextureFactory_Type.DEFAULT);
     this.mTransform = false;
-    this.mBBoxMin = [];
-    this.mBBoxMax = [];
+    this.mBBoxMin = [1e20,1e20,1e20];
+    this.mBBoxMax = [-1e20,-1e20,-1e20];
 	
     this.mVertexOffset = 0;
     this.mColorOffset = 0;
@@ -63,7 +68,10 @@ function GameonModel(name , app)
 	this.mActive = true;
     
     //
-    
+	this.mIterQueue = [];
+	this.mParentArea= parentarea;
+	this.mOnClick = undefined;
+	this.mCurrentMaterial = undefined;   
 	
 }
 
@@ -356,23 +364,37 @@ GameonModel.prototype.createPlane = function(left, bottom, back, right, top, fro
 {
 	var divx = 1; 
 	var divy = 1;
-	var divz = 1;
+	var w = right-left;
+	var h = top-bottom;
 	
 	if (grid != undefined)
 	{
-		divx = 1 / grid[0];
-		divy = 1 / grid[1];
-		divz = 1 / grid[2];
+		divx = w / grid[0];
+		divy = h / grid[1];
 	}
 	
-	for (var x = -0.0; x < 1.0; x+= divx)
+	for (var x = left; x < right; x+= divx)
 	{
-		for (var y = -0.0; y < 1.0; y+= divy)
+		for (var y = bottom; y < top; y+= divy)
 		{    		
+		/*
 			var left2 = left * divx + x;
 			var right2 = right * divx + x;
 			var top2 = top * divy + y;
 			var bottom2 = bottom * divy + y;
+			*/
+			var left2 = x;
+			var right2 = divx + x;
+			if (right2 > right)
+			{
+				right2 = right;
+			}
+			var top2 = divy + y;
+			if (top2 > top)
+			{
+				top2 = top;
+			}			
+			var bottom2 = y;
 			
 			var shape = new GLShape(this);
 			var leftBottomFront = shape.addVertex(left2, bottom2, front , 0.0 , 1.00, color);
@@ -556,7 +578,8 @@ GameonModel.prototype.draw = function(gl, loc)
 		for (var a=0; a< this.mVisibleRefs.length ; a++)
 		{
 			var ref = this.mVisibleRefs[a];
-			if (ref.mLoc == loc) {
+			if (ref.mLoc == loc) 
+			{
 				this.drawRef( gl, ref );
 			}
 		}
@@ -817,21 +840,21 @@ GameonModel.prototype.createAnimTrans = function(type , delay, away , no)
 	}else if (type == "swirlin")
 	{
 		from.mulScale( 30, 30 , 30);
-		from.addAreaRotate( 0, 0, 720);
+		from.addAreaRotation( 0, 0, 720);
 	}else if (type == "swirlout")
 	{
 		from.mulScale( 30, 30 , 30);
-		from.addAreaRotate( 0, 0, 720);
+		from.addAreaRotation( 0, 0, 720);
 	}
 	
 							
 	
 	if (away)
 	{
-		anim = this.mApp.anims().createAnim( to , from , this.mRefs[no] , delay , 2 , undefined , 1 , true);
+		anim = this.mApp.anims().createAnim( to , from , this.mRefs[no] , delay , 2 , undefined , 1 , true , true);
 	}else
 	{
-		anim = this.mApp.anims().createAnim( from , to , this.mRefs[no] , delay , 2 , undefined , 1 , false);
+		anim = this.mApp.anims().createAnim( from , to , this.mRefs[no] , delay , 2 , undefined , 1 , false , true);
 	}
 		
 }
@@ -971,6 +994,62 @@ GameonModel.prototype.createModelFromData = function(inputdata, mat , uvb)
 }
 
 
+GameonModel.prototype.createModelFromData2 = function(inputdata, mat , uvb , colors)
+{
+	var umid = uvb[0];//(uvb[2] + uvb[0]) /2;
+	var vmid = uvb[1];//(uvb[3] + uvb[1]) /2;
+	var ratiou = uvb[2] - uvb[0];
+	var ratiov = uvb[3] - uvb[1];
+	
+	var outvec = [0 ,0,0,1];
+	var tu,tv;
+	
+	// model info - vertex offset?
+	var len = inputdata.length;
+	//  v   c   uv
+	// (3 + 4 + 2) * 3
+	var off;
+	var shape = new GLShape(this);
+	
+	var temp = new Array(4);
+	
+	for (var a=0; a< len; a+= 9 ) 
+	{
+		temp[0] = inputdata[a+0][0];
+		temp[1] = inputdata[a+0][1];
+		temp[2] = inputdata[a+0][2];
+		
+		GMath.matrixVecMultiply2(mat, temp, 0 , outvec ,0);
+		tu = inputdata[a+2][0] * ratiou + umid;
+		tv  = inputdata[a+2][1] * ratiou + umid;
+		var v1 = shape.addVertexColorInt(outvec[0], outvec[1], outvec[2] , tu, tv, colors[0]);
+
+		temp[0] = inputdata[a+3][0];
+		temp[1] = inputdata[a+3][1];
+		temp[2] = inputdata[a+3][2];
+		
+		GMath.matrixVecMultiply2(mat, temp, 0 , outvec ,0);
+		tu = inputdata[a+5][0] * ratiou + umid;
+		tv  = inputdata[a+5][1] * ratiou + umid;
+		var v2 = shape.addVertexColorInt(outvec[0], outvec[1], outvec[2] , tu, tv, colors[0]);
+
+		temp[0] = inputdata[a+6][0];
+		temp[1] = inputdata[a+6][1];
+		temp[2] = inputdata[a+6][2];
+		
+		GMath.matrixVecMultiply2(mat, temp, 0 , outvec ,0);
+		tu = inputdata[a+8][0] * ratiou + umid;
+		tv  = inputdata[a+8][1] * ratiou + umid;
+		var v3 = shape.addVertexColorInt(outvec[0], outvec[1], outvec[2] , tu, tv, colors[0]);
+		shape.addFace( new GLFace(v1,v2,v3));
+
+	}
+
+
+    this.addShape(shape);
+    this.mTextureID = this.mApp.textures().get(TextureFactory_Type.DEFAULT);
+}
+
 GameonModel.prototype.addPlane = function(mat, cols, uvb) 
 {
     /*
@@ -1009,7 +1088,7 @@ GameonModel.prototype.addPlane = function(mat, cols, uvb)
 
 GameonModel.prototype.copyOfModel = function() 
 {
-    var model = new GameonModel(this.mName, this.mApp);
+    var model = new GameonModel(this.mName, this.mApp, this.mParentArea);
     model.mEnabled = this.mEnabled;
     model.mForceHalfTexturing = false;
     model.mForcedOwner = 0;
@@ -1035,6 +1114,12 @@ GameonModel.prototype.getRef = function(count , loc)
         {
             var ref = new GameonModelRef(this, loc);
             this.mRefs.push(ref);
+			if (this.mRefs.length > 1)
+			{
+				ref.copyData(this.mRefs[0]);
+				ref.set();
+			}
+			
         }
         return this.mRefs[count];
     }
@@ -1067,3 +1152,228 @@ GameonModel.prototype.hideDomainRefs = function(renderId)
 		}
 	}
 }
+
+GameonModel.prototype.setupIter = function(num) 
+{
+
+
+	this.mIterQueue = [];		
+	while (this.mRefs.length < num)
+	{
+		var ref = new GameonModelRef(this, 0);
+		this.mRefs.push(ref);
+		if (this.mRefs.length > 1)
+		{
+			ref.copyData(this.mRefs[0]);
+			ref.set();
+		}			
+	}
+	for (var a=0; a< num; a++)
+	{
+		this.mIterQueue.push(a);
+	}
+	
+}
+GameonModel.prototype.getRefById = function(refid, loc) 
+{
+	if (refid.id >= 0)
+	{
+		return this.getRef(refid.id, loc);
+	}
+	
+	// go through references and find id with name
+	for (var a=0; a< this.mIterQueue.length; a++)
+	{
+		var index = this.mIterQueue[a];
+		var ref = this.mRefs[index];
+		if (refid.alias == ref.mRefAlias)
+		{
+			// put it on the end
+			this.mIterQueue.splice(a,1);
+			this.mIterQueue.push(index);
+			refid.id = index;
+			return ref;
+		}
+	}
+	
+	// we didn't find alias get first ref
+	var index = this.mIterQueue[0];
+	var ref = this.mRefs[index];
+	ref.mRefAlias = refid.alias;
+	// now remove it - and put to back
+	this.mIterQueue.splice(0,1);
+	this.mIterQueue.push(index);
+	refid.id = index;
+	return ref;
+}
+
+GameonModel.prototype.onTouch = function(eye, ray, renderId, click) 
+{
+	var loc = [0,0,0];
+	
+	if (this.mParentArea != undefined)
+	{
+		if (!this.mParentArea.acceptTouch(this, click))
+		{
+			return undefined;
+		}
+	}else
+	{
+		if (this.mOnClick == undefined)
+			return undefined;
+	}
+	
+	var count = 0;
+	for (var a= 0; a< this.mRefs.length; a++)
+	{
+		var ref = this.mRefs[a];
+		if (ref.mVisible && ref.loc() == renderId)
+		{
+			var dist = ref.intersectsRay(eye , ray, loc);
+			if (dist >=0 && dist < 1e06)
+			{
+				dist = ref.distToCenter(loc);
+				var pair = new AreaIndexPair();
+				pair.mLoc[0] = loc[0];
+				pair.mLoc[1] = loc[1];
+				pair.mLoc[2] = loc[2];
+				pair.mDist = dist;
+				if (this.mParentArea != undefined)
+				{
+					pair.mArea = this.mParentArea.mID;
+					pair.mOnclick = this.mParentArea.mOnclick;
+					pair.mOnFocusLost = this.mParentArea.mOnFocusLost;
+					pair.mOnFocusGain = this.mParentArea.mOnFocusGain;
+					pair.mIndex = this.mParentArea.indexOfRef(ref);
+				}
+				else
+				{
+					pair.mArea = this.mName;
+					pair.mOnclick = this.mOnClick;
+					pair.mAlias = ref.mRefAlias;
+					pair.mOnFocusLost = undefined;
+					pair.mOnFocusGain =undefined;
+					pair.mIndex = count;
+				}
+				return pair;							
+			}
+		}
+		count++;
+	}
+	
+	return undefined;
+}
+
+GameonModel.prototype.addShapeFromString = function(vertices, textvertices, data)
+{
+	var shape = new GLShape(this);
+	var tok = data.split(" ");
+	var vert = new Array(4);
+	var count = 0;
+	var c = this.mApp.colors().white;
+	if (this.mCurrentMaterial != undefined && this.mCurrentMaterial.diffuse != undefined)
+	{
+		c = this.mCurrentMaterial.diffuse;
+	}else
+	if (this.mCurrentMaterial != undefined && this.mCurrentMaterial.ambient != undefined)
+	{
+		c = this.mCurrentMaterial.ambient;
+	}
+	else
+	{
+		c = this.mApp.colors().white;
+	}
+
+	for (var a=0; a< tok.length; a++)
+	{
+		var value = tok[a];
+		if (value.length == 0)
+		{
+			continue;
+		}
+		if (value.indexOf('/') >= 0)
+		{
+			var tok2 = value.split("/");
+			var index = parseInt(tok2[0])-1;
+			var index2 =parseInt(tok2[1])-1;
+			var vdata = vertices[index];
+			var tdata = textvertices[index2];
+			var v = undefined;
+			if (this.mCurrentMaterial.t != undefined)
+			{
+				var t0 = 0.0;
+				var t1 = 0.0;
+				if (tdata[0] < 0)
+				{
+					tdata[0] = 0;
+				}
+				if (tdata[0] > 1)
+				{
+					tdata[0] = 1;
+				}
+				if (tdata[1] < 0)
+				{
+					tdata[1] = 0;
+				}
+				if (tdata[1] > 1)
+				{
+					tdata[1] = 1;
+				}									
+				t0 = tdata[0] / this.mCurrentMaterial.t[2];
+				t1 = (1.0-tdata[1]) / this.mCurrentMaterial.t[3];
+				
+				t0 += this.mCurrentMaterial.t[0];
+				t1 += this.mCurrentMaterial.t[1];
+				v = shape.addVertex(vdata[0], vdata[2], vdata[1], t0, t1, c);
+			}else
+			{
+				v = shape.addVertex(vdata[0], vdata[2], vdata[1], tdata[0], 1.0-tdata[1], c);	
+			}
+			 
+			vert[count] = v;
+		}else
+		{
+			var index = parseInt(value)-1;
+			var vdata = vertices[index];
+			if (vdata == undefined)
+			{
+				console.log("dasdasdas");
+			}
+			var v = shape.addVertex(vdata[0], vdata[2], vdata[1], 0,0, c);
+			vert[count] = v;
+		}
+		count ++;
+	}
+	if (count == 3)
+	{
+		var face = new GLFace(vert[0], vert[1], vert[2]);
+		shape.addFace(face);
+	}else
+	if (count == 4)
+	{
+		var face = new GLFace(vert[0], vert[1], vert[2]);
+		shape.addFace(face);
+		
+		var face2 = new GLFace(vert[0], vert[2], vert[3]);
+		shape.addFace(face2);
+	}
+	this.addShape(shape);
+}
+GameonModel.prototype.useMaterial = function(substring) 
+{
+	var defaulttext = this.mApp.textures().get(TextureFactory_Type.DEFAULT);
+	this.mCurrentMaterial = this.mApp.textures().getMaterial(substring);
+	if (this.mTextureID ==  defaulttext)
+	{
+		if (this.mCurrentMaterial.diffuseMapId != defaulttext)
+		{
+			this.mTextureID = this.mCurrentMaterial.diffuseMapId;
+		}else
+		if (this.mCurrentMaterial.ambientMapId != defaulttext)
+		{
+			this.mTextureID = this.mCurrentMaterial.ambientMapId;
+		}		
+	}
+}
+
+

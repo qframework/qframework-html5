@@ -457,6 +457,22 @@ ServerkoParse.parseFloatArray = function(array,data)
 	return count;
 }
 
+ServerkoParse.parseFloatArray2 = function(data)
+{
+	var array = new Array();
+	var val = 0;
+	var tok = data.split(" ");
+	
+	for (var a=0 ; a< tok.length; a++)
+	{
+		var tokval = tok[a];
+		val= parseFloat(tokval);
+		
+		array.push(val);
+	} 
+	return array;
+}
+
 ServerkoParse.parseIntArray = function(array,data)
 {
 	if (data == undefined || data == "" )
@@ -576,5 +592,50 @@ ServerkoParse.parseFloatVector = function(data)
     }
     
     return array;
+}
+
+
+var getcounter = 0;
+ServerkoParse.prototype.get = function(uri, callback)
+{
+
+	uri += "?"+getcounter;
+	getcounter++;
+
+	var xmlHttp = new XMLHttpRequest(); 
+	//xmlHttp.responseType = "arraybuffer";
+    xmlHttp.onload = function ProcessRequest(e) 
+	{
+		var result = xmlHttp.response;
+		console.log(result);
+		q_serverparser.onJSONData(result);
+	}
+
+    xmlHttp.open( "GET", uri, true );
+    xmlHttp.send(null);	
+	var a = 1;
+	
+/*
+	var socket = io.connect("http://127.0.0.1:8000");
+
+	socket.on('connect',function() {
+		// send get
+		var data = "GET " + uri +   " HTTP/1.1\r\n";
+		socket.send(data);
+	});
+	// Add a connect listener
+	socket.on('message',function(data) {
+		console.log( ' MESSAGE =' + data );
+		//var newdata = base64_decode(data);
+		console.log( ' MESSAGE ' + newdata );
+		q_serverparser.onSocketData(data);
+	});
+	
+	// Add a disconnect listener
+	socket.on('disconnect',function() 
+	{
+		var a= 1;
+	});	
+	*/
 }
 

@@ -346,7 +346,60 @@ setupOffset : function(value)
 forceIndexCount : function(count)
 {
 	this.mIndexCount = count;
+},
+
+normalize : function()
+{
+	// get scale
+	// get center
+	
+	var xc = (this.mBBoxMax[0] + this.mBBoxMin[0])/2;
+	var yc = (this.mBBoxMax[1] + this.mBBoxMin[1])/2;
+	var zc = (this.mBBoxMax[2] + this.mBBoxMin[2])/2;
+	
+	var xw = this.mBBoxMax[0] - this.mBBoxMin[0];
+	var yw = this.mBBoxMax[1] - this.mBBoxMin[1];
+	var zw = this.mBBoxMax[2] - this.mBBoxMin[2];
+	
+	for (var a =0; a < this.mVertexList.length; a++)
+	{
+		var v = this.mVertexList[a];
+		v.x -= xc;
+		v.y -= yc;
+		v.z -= zc;
+		
+		if (xw != 0)
+			v.x /= xw;
+		if (yw != 0)
+			v.y /= yw;
+		if (zw != 0)
+			v.z /= zw;
+	}
+},
+
+invert : function(x, y, z)
+{
+	// get scale
+	// get center
+	
+	for (var a =0; a < this.mVertexList.length; a++)
+	{
+		var v = this.mVertexList[a];
+		if (x)
+		{
+			v.x *= -1; 
+		}
+		if (y)
+		{
+			v.y *= -1; 
+		}
+		if (z)
+		{
+			v.z *= -1; 
+		}			
+	}
 }
 
+	
 }
 

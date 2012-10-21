@@ -24,7 +24,15 @@ function RenderDomain(name, app, w, h)
 	this.mVisibleModelList2 = [];    	
 	this.mTexts = new TextRender();
 	this.mApp = app;
+    this.mPanX = false;
+    this.mPanY = false;
+    this.mPanCoords = [ -1000.0,1000.0,-1000.0,1000.0];
+    this.mLastPanX = -1;
+    this.mLastPanY = -1;
+	
 	this.mRenderId = -1;
+    this.mSpaceBottomLeft = [0,0];
+    this.mSpaceTopRight = [0,0];
 	this.mName = name;
 	
 	this.mFov = 45;
@@ -42,14 +50,16 @@ function RenderDomain(name, app, w, h)
 	this.mWidthPerct = 1.0;
 	this.mHeightPerct = 1.0;
 	this.mAspect = 1.0;
-	this.mCS = new GameonCS();
+	this.mCS = new GameonCS(app);
 
 	this.mVisible = false;
-	
+	this.mHorizontalScroller = undefined;
+	this.mVerticalScroller = undefined;
+
 }
 
 
-RenderDomain.prototype.draw = function(gl) 
+RenderDomain.prototype.draw = function(gl , delay) 
 {
 	if (!this.mVisible)
 	{
@@ -59,7 +69,7 @@ RenderDomain.prototype.draw = function(gl)
 	gl.viewport(this.mViewport[0], this.mViewport[1], this.mViewport[2], this.mViewport[3] );
 	gl.clear(gl.DEPTH_BUFFER_BIT);
 
-	this.mCS.applyCamera(gl);
+	this.mCS.applyCamera(gl , delay);
 	
 
 	var len = this.mVisibleModelList.length;
@@ -261,4 +271,213 @@ RenderDomain.prototype.hide = function()
 	
 }	
 
+RenderDomain.prototype.onTouchModel = function(x, y, click, noareas) 
+{
+	var rayVec = [ 0,0,0];
+	var eye = undefined;
 	
+	this.mCS.screen2spaceVec(x, y, rayVec);
+	eye = this.mCS.eye();
+	
+	var data = undefined;
+	var len = this.mVisibleModelList.length;
+	for (var a=0; a< len; a++)
+	{
+		var model = this.mVisibleModelList[a];
+		if (noareas && model.mParentArea!= undefined)
+		{
+			continue;
+		}
+		data = model.onTouch(eye , rayVec , this.mRenderId,click);
+		if (data != undefined)
+		{
+			return data;
+		}
+	}
+
+	len = this.mVisibleModelList2.length;
+	for (var a=0; a< len; a++) 
+	{
+		var model = this.mVisibleModelList2[a];
+		if (noareas && model.mParentArea!= undefined)
+		{
+			continue;
+		}			
+		
+		data = model.onTouch(eye , rayVec , this.mRenderId,click);
+		if (data != undefined)
+		{
+			return data;
+		}			
+	}
+
+	return undefined;
+}	
+
+
+RenderDomain.prototype.pan = function(mode, scrollers, coords) 
+{
+	if (mode = "enable")
+	{
+		// enable x and y
+		this.mPanX = true;
+		this.mPanY = true;
+	}else if (mode == "enablex")
+	{
+		// enable x
+		this.mPanX = true;
+		this.mPanY = false;			
+	}else if (mode == "enabley")
+	{
+		// enable y
+		this.mPanX = false;
+		this.mPanY = true;			
+	}else if (mode == "disable")
+	{
+		// disable all
+		this.mPanX = false;
+		this.mPanY = false;			
+	}
+	if (coords != undefined)
+	{
+		ServerkoParse.parseFloatArray(this.mPanCoords, coords);
+	}
+	
+	if (scrollers != undefined && scrollers == "true")
+	{
+		if (this.mPanX)
+		{
+			//mHorizontalScroller = new GameonModel("horscroll", mApp, null);
+		}
+	}
+}
+
+
+
+RenderDomain.prototype.onPan = function(x, y) 
+{
+	
+	if (!this.mPanX && !this.mPanY)
+	{
+		return false;
+	}
+	
+	if ( x < this.mOffsetX || x > this.mOffsetX + this.mWidth || y < this.mOffsetY || y > this.mOffsetY + this.mHeight)
+	{
+		return false;
+	}
+	
+	// calculate delta
+	if (this.mLastPanX == -1)
+	{
+		this.mLastPanX = x; 
+		this.mLastPanY = y;
+		return true;
+	}
+	
+	var deltax = x - this.mLastPanX;
+	var deltay = y - this.mLastPanY;
+
+	
+	var eye = this.mCS.eye();
+
+	var lookat = this.mCS.lookat();
+	
+	var lasteyex = eye[0];
+	var lasteyey = eye[1];
+	var lastlookx = lookat[0];
+	var lastlooky = lookat[1];
+	
+	
+	if (this.mPanX)
+	{
+		eye[0] -= deltax/50.0;
+		lookat[0] -= deltax/50.0;
+	}
+	if (this.mPanY)
+	{
+		eye[1] += deltay/50.0;
+		lookat[1] += deltay/50.0;
+	}
+	
+	
+	//System.out.println( eye[0] );
+	this.mCS.setCamera(lookat , eye);
+	this.mLastPanX = x; 
+	this.mLastPanY = y;
+	
+	var canreturn = false;
+	var lastrunx = eye[0];
+	var lastruny = eye[1];
+	
+	do 
+	{
+		
+		lastrunx = eye[0];
+		lastruny = eye[1];
+		
+		this.mCS.screen2space(this.mOffsetX+this.mWidth, -this.mOffsetY, this.mSpaceTopRight);
+		this.mCS.screen2space(this.mOffsetX, -this.mOffsetY+this.mHeight, this.mSpaceBottomLeft);
+/*
+		System.out.println( mSpaceBottomLeft[0]+","+ mSpaceBottomLeft[1]+","+ 
+				mSpaceTopRight[0] +","+  mSpaceTopRight[1]);
+		
+		System.out.println( mSpaceBottomLeft[0]+","+ mSpaceBottomLeft[1]+","+ 
+							mSpaceTopRight[0] +","+  mSpaceTopRight[1]);
+		*/
+		canreturn = true;
+		if (this.mPanCoords[0] != -1000)
+		{
+			if (this.mPanX)
+			{
+				if ((this.mPanCoords[1] - this.mPanCoords[0]) < (this.mSpaceTopRight[0] - this.mSpaceBottomLeft[0]))
+				{
+					eye[0] = lasteyex;
+					lookat[0] = lastlookx;
+					this.mCS.setCamera(lookat , eye);
+					canreturn = true;
+					
+				}else
+				if (this.mSpaceBottomLeft[0] < this.mPanCoords[0]+0.001 || this.mSpaceTopRight[0] > this.mPanCoords[1]-0.001)
+				{
+					eye[0] = (lasteyex + eye[0]) / 2;
+					lookat[0] = (lastlookx + lookat[0]) / 2;
+					this.mCS.setCamera(lookat , eye);
+					canreturn = false;
+				}
+			}
+			
+			if (this.mPanY )
+			{
+				if ((this.mPanCoords[3] - this.mPanCoords[2]) < (this.mSpaceTopRight[1] - this.mSpaceBottomLeft[1]))
+				{
+					eye[1] = lasteyey;
+					lookat[1] = lastlooky;
+					this.mCS.setCamera(lookat , eye);
+					canreturn = true;						
+				}else
+				if (this.mSpaceBottomLeft[1] < this.mPanCoords[2]+0.001 || this.mSpaceTopRight[1] > this.mPanCoords[3]-0.001)
+				{
+					eye[1] = (lasteyey + eye[1]) / 2;
+					lookat[1] = (lastlooky + lookat[1]) / 2;
+					this.mCS.setCamera(lookat , eye);
+					canreturn = false;
+				}
+			}
+		}
+		if (lastrunx == eye[0] && lastruny == eye[1])
+		{
+			break;
+		}
+	}while(!canreturn);
+	return true;
+}
+
+
+
+RenderDomain.prototype.resetPan = function() 
+{
+	this.mLastPanX = -1;
+	this.mLastPanY = -1;
+}	
+

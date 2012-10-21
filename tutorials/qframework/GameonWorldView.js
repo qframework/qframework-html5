@@ -28,7 +28,7 @@ function GameonWorldView(world, app)
 	this.mSplashLookat = new J3DIMatrix4();
 }
 
-GameonWorldView.prototype.onDrawFrame = function (gl , time)
+GameonWorldView.prototype.onDrawFrame = function (gl , delay)
 {
 	// apply camera
 	// set to shader. default camera
@@ -44,7 +44,7 @@ GameonWorldView.prototype.onDrawFrame = function (gl , time)
 
 	this.mWorld.mInDraw = true;
 
-	this.mWorld.draw(gl);
+	this.mWorld.draw(gl , delay);
 	
 	this.mWorld.mInDraw = false;
 	gl.colorMask(true, true, true, true);

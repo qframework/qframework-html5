@@ -147,6 +147,7 @@ function LayoutArea()
 	this.mColors[2] = this.mApp.colors().white;
 	this.mColors[3] = this.mApp.colors().white;
 	this.mPsyData = undefined;
+	this.mBorderWidth= 0.03;
 */	
 
 }
@@ -842,10 +843,12 @@ LayoutArea.prototype.createWorldModel  = function() {
 					{
 						this.mModelBack = this.mApp.items().createFromType(GameonModelData_Type.BACKIMAGE , 
 							this.mColorBackground , text , null);					
+						this.mModelBack.mParentArea = this;
 					}else
 					{
 						this.mModelBack = this.mApp.items().createFromType(GameonModelData_Type.BACKGROUND , 
 							this.mColorBackground , text , null);
+						this.mModelBack.mParentArea = this;
 					}
 					ref.mOwner = n;
 					ref.mTransformOwner = true;
@@ -858,11 +861,13 @@ LayoutArea.prototype.createWorldModel  = function() {
 					{
 						this.mModelBack = this.mApp.items().createFromType(GameonModelData_Type.BACKIMAGE , 
 							this.mColorBackground , this.mColorBackground2 , null);					
+						this.mModelBack.mParentArea = this;
 					}else
 					{
 				
 						this.mModelBack = this.mApp.items().createFromType(GameonModelData_Type.BACKGROUND , 
 							this.mColorBackground , this.mColorBackground2 , null);
+						this.mModelBack.mParentArea = this;
 					}
 				}
 			}else
@@ -871,11 +876,13 @@ LayoutArea.prototype.createWorldModel  = function() {
 					{
 						this.mModelBack = this.mApp.items().createFromType(GameonModelData_Type.BACKIMAGE , 
 								this.mColorBackground , this.mColorBackground2 , null);					
+						this.mModelBack.mParentArea = this;
 					}else
 					{
 			
 						this.mModelBack = this.mApp.items().createFromType(GameonModelData_Type.BACKGROUND , 
 								this.mColorBackground , this.mColorBackground2 , null);
+						this.mModelBack.mParentArea = this;
 					}
 			}
 			
@@ -933,7 +940,7 @@ LayoutArea.prototype.createWorldModelItems  = function()
 		this.createCustomModel();
 		return;
 	}
-	this.mModel = new GameonModel("area"+ this.mID , this.mApp );
+	this.mModel = new GameonModel("area"+ this.mID , this.mApp , undefined);
 	var model = this.mModel;
 	//Log.d("model" , " cordstart ------");
 	for (var a=0; a< this.mItemFields.length; a++ ) {
@@ -1162,6 +1169,9 @@ LayoutArea.prototype.itemsAnim  = function(strData) {
 	for (var a=0; a< this.mItemFields.length; a++) 
 	{
 		item = this.mItemFields[a].mItem;
+		var startAnim = new GameonModelRef(undefined, this.mDisplay);
+		startAnim.copy( item.mModelRef);
+		startAnim.copyMat( item.mModelRef);		
 		this.mApp.mAnims.animRef(movetype, item.mModelRef , item.mModelRef, delay);
 	}
 }
@@ -1214,9 +1224,16 @@ LayoutArea.prototype.invertItem  = function(strData ) {
 
 LayoutArea.prototype.updateBorder = function(border) {
 	// 
-	if (border == "thinrect")
+	var tok = border.split(".");
+	var type = tok[0];
+	
+	if (type == "thinrect")
 	{
 		this.mBorder = LayoutArea_Border.THINRECT;
+	}
+	if (tok.length > 1)
+	{
+		this.mBorderWidth = parseFloat(tok[1]) * 0.03;
 	}
 }
 
@@ -1356,6 +1373,13 @@ LayoutArea.prototype.createCustomModel = function()
 
 LayoutArea.prototype.setScrollers = function(data)
 {
+	if (data == "none")
+	{
+		this.mHasScrollH = false;
+		this.mHasScrollV = false;
+		return;
+	}
+	
 	var num = ServerkoParse.parseFloatArray(this.mScrollers, data);
 	if (num > 0)
 	{
@@ -1373,6 +1397,11 @@ LayoutArea.prototype.setScrollerVal = function(val)
 
 LayoutArea.prototype.onDragg = function(dx, dy, dz)
 {
+	if (!this.mHasScrollH && !this.mHasScrollV)
+	{
+		return;
+	}
+	
 	if (this.mHasScrollH || this.mHasScrollV)
 	{
 		if (this.mScollerAnim == undefined)
@@ -1422,4 +1451,108 @@ LayoutArea.prototype.assignPsyData = function(bodydata)
 {
 	// 
 	this.mPsyData =  bodydata;
+}
+
+LayoutArea.prototype.acceptTouch = function(model, click) 
+{
+	if (this.mActiveItems == 0)
+	{
+		return false;
+	}
+	if (click)
+	{
+		if ( this.mOnclick == undefined || this.mOnclick.length == 0 )
+			return false;
+	}else
+	{
+		if (!this.mHasScrollV && !this.mHasScrollH)
+		{
+			if ( (this.mOnFocusGain== undefined || this.mOnFocusGain.length == 0) &&  
+				(this.mOnFocusLost== undefined || this.mOnFocusLost.length == 0))
+				return false;
+		}
+	}			
+	
+	if (this.mDisabledInput || !this.hasTouchEvent() )
+		return false;
+	if (this.mPageVisible == false || this.mState != LayoutArea_State.VISIBLE)
+	{
+		return false;
+	}
+	if ( this.mParent.mPagePopup.length > 0 &&  !this.mPageId == this.mParent.mPagePopup)
+	{
+		return false;
+	}
+
+	return true;
+}
+
+LayoutArea.prototype.indexOfRef = function(ref) 
+{
+	if (this.mModel != undefined && ref == this.mModel.ref(0))
+		return -1;
+	if (this.mModelBack != undefined && ref == this.mModelBack.ref(0))
+		return -1;		
+	
+	for (var a=0; a < mItemFields.length; a++)
+	{
+		var f = mItemFields[a];
+		if (f != undefined && f.mRef == ref)
+		{
+			return a;
+		}
+	}
+	return -1;
+}
+
+LayoutArea.prototype.acceptTouch = function(model, click) 
+{
+	if (this.mActiveItems == 0)
+	{
+		return false;
+	}
+	if (click)
+	{
+		if ( this.mOnclick == undefined || this.mOnclick.length == 0 )
+			return false;
+	}else
+	{
+		if (!this.mHasScrollV && !this.mHasScrollH)
+		{
+			if ( (this.mOnFocusGain== undefined || this.mOnFocusGain.length == 0) &&  
+			(this.mOnFocusLost== undefined || this.mOnFocusLost.length == 0))
+				return false;
+		}
+	}			
+	
+	if (this.mDisabledInput || !this.hasTouchEvent() )
+		return false;
+	if (this.mPageVisible == false || this.mState != LayoutArea_State.VISIBLE)
+	{
+		return false;
+	}
+	if ( this.mParent.mPagePopup.length > 0 &&  !this.mPageId.equals(this.mParent.mPagePopup))
+	{
+		return false;
+	}
+
+	return true;
+}
+
+LayoutArea.prototype.indexOfRef = function(ref) 
+{
+	if (this.mModel != undefined && ref == this.mModel.ref(0))
+		return -1;
+	if (this.mModelBack != undefined && ref == this.mModelBack.ref(0))
+		return -1;		
+	
+	for (var a=0; a < this.mItemFields.length; a++)
+	{
+		var f = this.mItemFields[a];
+		if (f != undefined && f.mRef == ref)
+		{
+			return a;
+		}
+	}
+	return -1;
 }

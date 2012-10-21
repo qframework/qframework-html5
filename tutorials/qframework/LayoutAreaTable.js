@@ -80,7 +80,11 @@ function LayoutAreaTable(subtype , app)
 	}else
 	if (subtype.indexOf("hlist") == 0)
 	{
+		mHasScrollH = true;
 		this.mSubType = LayoutAreaTable_SubType.HLIST;
+	}else if (subtype.indexOf("plainlist") == 0)
+	{
+		this.mSubType = LayoutAreaTable_SubType.PLAINLIST;
 	}
 	
 	this.mType = LayoutArea_Type.TABLE;
@@ -104,7 +108,7 @@ function LayoutAreaTable(subtype , app)
 	this.mModifiersW = undefined;
 	this.mModifiersH = undefined;
 	this.mFieldsData = undefined;
-
+	this.mBorderWidth= 0.03;
 	
 }
 
@@ -117,7 +121,8 @@ LayoutAreaTable_SubType =
 	SGRID:1,
 	CARDTABLE:2,
 	LIST:3,
-	HLIST:4
+	HLIST:4,
+	PLAINLIST:5
 }
 
 // inheritance
@@ -139,6 +144,9 @@ LayoutAreaTable.prototype.initLayout = function()
 	}else if (this.mSubType == LayoutAreaTable_SubType.HLIST)
 	{
 		this.initHList();
+	}else if (mSubType == LayoutAreaTable_SubType.PLAINLIST)
+	{
+		this.initPlainList();
 	}
 }
 
@@ -304,6 +312,44 @@ LayoutAreaTable.prototype.getScrollCoords = function(col , ind , f)
 }
 
 
+LayoutAreaTable.prototype.calcScrollCoords = function(col , ind , max, f)
+{
+	var div = 1/(this.mSizeW-1);
+	var p = (ind-max/2) * div + div/2;
+	
+	// calculate X based on row info
+	f.mX = 0;
+	f.mY = 0;
+	f.mW = 1;
+	f.mH = 1;
+	
+	if (this.mHasScrollV)
+	{
+		f.mX -= (0.05*this.mBounds[0]);
+		f.mY -= (p*this.mBounds[1]);// - div/2;
+		f.mZ = 0.0;
+		f.mW *= 0.9;
+		f.mH *= div;
+		f.mX += this.mFieldsData[col * 4]*this.mBounds[0];
+		f.mY += this.mFieldsData[col * 4+1]*this.mBounds[1]*div;
+		
+	}
+	else if (this.mHasScrollH)
+	{
+		f.mX += (p*this.mBounds[0]);// - div/2;
+		f.mY -= (0.05*this.mBounds[1]);
+		f.mZ = 0.0;
+		
+		f.mH *= 0.9;
+		f.mW *= div;
+
+	}
+	f.mW *= mFieldsData[col * 4+2];
+	f.mH *= mFieldsData[col * 4+3];
+
+}
+
+
 LayoutAreaTable.prototype.createCustomModel = function()
 {
 	// scroller
@@ -320,7 +366,7 @@ LayoutAreaTable.prototype.createCustomModel = function()
 		}
 		
 		var div = this.mSizeW / this.mSize;
-		var ref = new GameonModelRef(undefined, this.mDisplay);
+		var ref = new GameonModelRef(undefined, this.mDisplay , undefined);
 		ref.mLoc = this.mDisplay;
 		var scrollpos = this.mScrollers[0] *div * 2;
 		if (this.mSubType == LayoutAreaTable_SubType.LIST)
@@ -421,7 +467,9 @@ LayoutAreaTable.prototype.createDefaultFields = function()
 
 LayoutAreaTable.prototype.createFields = function(data)
 {
-	if (this.mSubType == LayoutAreaTable_SubType.LIST || this.mSubType == LayoutAreaTable_SubType.HLIST)
+	if (this.mSubType == LayoutAreaTable_SubType.LIST || 
+		this.mSubType == LayoutAreaTable_SubType.HLIST ||
+		this.mSubType == LayoutAreaTable_SubType.PLAINLIST)
 	{
 		// parse info for coordinates of each field in rows
 		this.createDefaultFields();
@@ -449,7 +497,7 @@ LayoutAreaTable.prototype.createFields = function(data)
 LayoutAreaTable.prototype.initHList = function()
 {
 	this.mHasScrollH = true;
-	
+	this.mHasScrollV = false;
 	this.mListScaleMinW = 1.0 - this.mModifier/12.0;
 	this.mListScaleMaxW = 1.0 + this.mModifier/12.0;
 	this.mListScaleMinH = 1.0 - this.mModifier/12.0;
@@ -461,8 +509,22 @@ LayoutAreaTable.prototype.initHList = function()
 	
 }
 
+LayoutAreaTable.prototype.initPlainList = function()
+{
+	this.mHasScrollV = false;
+	this.mHasScrollH = false;
+	this.updateFields();
+	
+}
+
 LayoutAreaTable.prototype.updateScrollers = function()
 {
+	var allenabled = false;
+	if (!this.mHasScrollH && ! this.mHasScrollV)
+	{
+		allenabled = true;
+	}
+		
 	var count = 0;
 	var x = 0,y = 0;
 	//console.log (" scroll "  + this.mScrollers[0] + " " + this.mScrollers[1]+ " " + this.mScrollers[2] );
@@ -470,7 +532,7 @@ LayoutAreaTable.prototype.updateScrollers = function()
 	{
 		this.setField(a);
 		var field = this.mItemFields[a];
-		if (this.getScrollCoords(x,y , field))
+		if (this.getScrollCoords(x,y , field)|| allenabled)
 		{
 			//field.mRef.clear();
 			field.mH *= this.mModifiersH[count];
@@ -503,7 +565,7 @@ LayoutAreaTable.prototype.updateScrollers = function()
 		}
 		
 	}
-	if (this.mModel != undefined)
+	if (this.mModel != undefined && !allenabled)
 	{
 		this.mModel.setActive(true);
 		this.mModel.setState(LayoutArea_State.VISIBLE);
@@ -530,4 +592,38 @@ LayoutAreaTable.prototype.setText = function(strData)
 	{
 		this.pushFrontItem(strData);
 	}
+}
+
+
+LayoutAreaTable.prototype.updateFields = function()
+{
+	var allenabled = false;
+	var count = 0;
+	var x = 0,y = 0;
+	for (var a=0; a < this.mSize ; a++)
+	{
+		this.setField(a);
+		var field = this.mItemFields[a];
+		this.calcScrollCoords(x,y , this.mSizeW, field);
+
+		//field.mRef.clear();
+		if (x == this.mSizeH-1)
+		{
+			count++;
+		}
+		field.mActive = true;
+		field.mRef.setPosition(field.mX,field.mY,field.mZ);
+		field.mRef.setScale(field.mW,field.mH,1);
+		field.mRef.set();
+		field.updateLocation();
+		field.setState(LayoutArea_State.VISIBLE);
+		
+		x++;
+		if (x >= this.mSizeH)
+		{
+			x = 0;
+			y++;
+		}
+		
+	} 
 }

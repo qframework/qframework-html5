@@ -17,8 +17,9 @@
    Should be used for peace, not war :)   
 */
 
-function GameonCS( ) 
+function GameonCS( app) 
 {
+	this.mApp = app;
 	this.mCanvasW = 0.0;
 	this.mCanvasH = 0.0;
 	this.mCanvasZ = 0.0;
@@ -27,19 +28,34 @@ function GameonCS( )
 	this.mProjection = new Array(0,0,0,0 , 0,0,0,0 , 0,0,0,0 , 0,0,0,0);
 	this.mProjData = new Array(0,0,0,0);
 
-	this.mCameraEye= new Array(0.0,0.0,5.0);
-	this.mCameraLookAt = new Array(0,0,0);
+	this.mCameraEye;//= new Array(0.0,0.0,5.0);
+	this.mCameraLookAt;// = new Array(0,0,0);
 
 	this.mHudInit = false;
 	this.mSpaceInit = false;
 
 	this.mBBox = new Array(0,0,0,0 , 0,0,0,0);
 
-	this.mUpZ = new Array(0,1,0);
-	this.mUpZHud = new Array(0,1,0);
+	this.mUpZ;// = new Array(0,1,0);
 	this.mScreenHeight = 0;
 	this.mScreenWidth = 0;
+	this.mCameraData = undefined;
+	this.mAnimDataStart = undefined;
+	this.mAnimDataEnd = undefined;	
 	
+	this.mCameraData = new GameonModelRef(undefined, 0);
+	this.mCameraEye = this.mCameraData.mAreaPosition;
+	this.mCameraLookAt = this.mCameraData.mPosition;
+	
+	this.mUpZ = this.mCameraData.mScale;
+		 
+	this.mCameraEye[0] = 0;
+	this.mCameraEye[1] = 0;
+	this.mCameraEye[2] = 5;
+	this.mUpZ[0] = 0;
+	this.mUpZ[1] = 1;
+	this.mUpZ[2] = 0;
+		 
 }	
 
 GameonCS.prototype.setGlu = function(g)
@@ -154,14 +170,6 @@ GameonCS.prototype.saveLookAt = function(eye, center, up) {
 	
 }
 
-GameonCS.prototype.saveLookAtHud = function(eye, center, up) {
-	for (var a=0; a< 16; a++)
-	{
-		this.mLookAtHud[a] = 0;
-	}		
-	GMath.lookAt(this.mLookAtHud, eye , center , up);
-	
-}
 
 GameonCS.prototype.screen2spaceVec = function(x,y, vec)
 {
@@ -248,8 +256,14 @@ GameonCS.prototype.setCamera = function(lookat ,eye)
 	
 }
 
-GameonCS.prototype.applyCamera = function(gl)
+GameonCS.prototype.applyCamera = function(gl , delta)
 {
+	if (this.mCameraData.animating())
+	{
+		this.mCameraData.animate(delta);
+		this.saveLookAt(this.mCameraEye ,  this.mCameraLookAt , this.mUpZ);
+	}
+
 	if (!this.mSpaceInit)
 	{
 		this.mSpaceInit = true;
@@ -348,3 +362,32 @@ GameonCS.prototype.eye = function()
 	return this.mCameraEye;
 }	
 
+GameonCS.prototype.moveCamera = function(lookat, eye, animdelay) 
+{
+	if (this.mAnimDataStart == undefined)
+	{
+		this.mAnimDataStart = new GameonModelRef(undefined, 0);
+	}
+	if (this.mAnimDataEnd == undefined)
+	{
+		this.mAnimDataEnd = new GameonModelRef(undefined, 0);
+	}
+	
+	this.mAnimDataStart.copy(this.mCameraData);
+	this.mAnimDataEnd.copy(this.mCameraData);
+	this.mAnimDataEnd.setAreaPosition(eye);
+	this.mAnimDataEnd.setPosition(lookat);
+	
+	this.mApp.anims().createAnim( this.mAnimDataStart, this.mAnimDataEnd , 
+				this.mCameraData , animdelay, 2 , undefined , 1, false, false);
+}
+
+GameonCS.prototype.lookat = function() 
+{
+	return this.mCameraLookAt;
+}
+
+GameonCS.prototype.up = function() 
+{
+	return this.mUpZ;
+}

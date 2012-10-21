@@ -80,7 +80,7 @@ this.mApp = app;
 	this.mHasScrollV = false;
 	this.mScollerAnim = undefined;
 	this.mActiveItems = 1;
-	
+	this.mBorderWidth= 0.03;	
 }
 
 LayoutAreaLayout.prototype = new LayoutArea();

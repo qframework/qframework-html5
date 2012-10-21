@@ -99,7 +99,7 @@ LayoutItem.prototype.setPosition = function(loc, x, y, z,
 	
 	var height = 1.0;
 	this.mModelRef.setPosition(x, y , z+0.01 );
-	this.mModelRef.setScale(w, h , height);
+	this.mModelRef.setScale(w, h , w);
 	this.mModelRef.setRotate( 0, 0, 0);
 	this.mModelRef.apply();
 	if (copyref) {

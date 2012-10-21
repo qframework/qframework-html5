@@ -17,12 +17,6 @@
    Should be used for peace, not war :)   
 */
 
-function ObjectsFactory_RefId()
-{
-    var name = undefined;
-	var id = -1;
-}
-
 
 function ObjectsFactory(app)
 {
@@ -100,7 +94,7 @@ ObjectsFactory.prototype.create = function(name, data , loc , color)
 	}
 }	
 
-ObjectsFactory.prototype.place = function(name, data) 
+ObjectsFactory.prototype.place = function(name, data , state) 
 {
     var refid = this.refId(name);
     
@@ -114,10 +108,19 @@ ObjectsFactory.prototype.place = function(name, data)
     var coords = new Array(3);
     ServerkoParse.parseFloatArray(coords, data);
 
-    var ref = model.getRef(refid.id , 0);
-    ref.setPosition(coords);
-    ref.set();
+    var ref = model.getRefById(refid , 0);
+	ref.setPosition(coords);
+	ref.set();
 
+	if (state != undefined)
+	{
+		var visible = false;
+		if (state == "visible")
+		{
+			visible = true;
+		}
+		ref.setVisible(visible);			
+	}	
 }
 
 ObjectsFactory.prototype.scale = function(name, data) 
@@ -134,7 +137,7 @@ ObjectsFactory.prototype.scale = function(name, data)
     var coords = new Array(3);
     ServerkoParse.parseFloatArray(coords, data , 0);
 
-    var ref = model.getRef(refid.id);
+    var ref = model.getRefById(refid,0);
     ref.setScale(coords);
     ref.set();
 }
@@ -153,7 +156,7 @@ ObjectsFactory.prototype.rotate = function(name, data)
     var coords = new Array(3);
     ServerkoParse.parseFloatArray(coords, data);
 
-    var ref = model.getRef(refid.id);
+    var ref = model.getRefById(refid,0);
     ref.setRotate(coords);
     ref.set();
 }
@@ -169,7 +172,7 @@ ObjectsFactory.prototype.texture = function(name, data , submodel)
 	}
 	
 	var model = item.mModel;
-	var r = model.ref(refid.id);
+	var r = model.getRefById(refid,0);
     
     if (data != undefined && data.length > 0)
     {
@@ -195,8 +198,8 @@ ObjectsFactory.prototype.state = function(name, data)
 	{
 		return;
 	}
-	
 	var model = item.mModel;
+	var ref = model.getRefById(refid , 0);
 
 	var visible = false;
 	if (data == "visible")
@@ -205,10 +208,10 @@ ObjectsFactory.prototype.state = function(name, data)
 	}
 	if (model.mRefs.length == 0)
 	{
-		this.place(name, "0,0,0");
+		this.place(name, "0,0,0", null);
 	}
 	
-	model.ref(refid.id).setVisible(visible);
+	ref.setVisible(visible);
 	//model.setVisible(visible);
 }
 
@@ -253,7 +256,7 @@ ObjectsFactory.prototype.processObject = function( objData) {
 	if (objData["location"] != undefined)
 	{	        
 		var data = objData["location"];    
-		this.place(name, data);
+		this.place(name, data, null);
 	}
 	
 	if (objData["bounds"] != undefined)
@@ -273,20 +276,40 @@ ObjectsFactory.prototype.processObject = function( objData) {
 		var data = objData["state"];    
 		this.state(name, data);
 	}	
+	if (objData["rotate"] != undefined)
+	{	        
+		var data = objData["rotate"];    
+		this.rotate(name, data);
+	}	
+	if (objData["iter"] != undefined)
+	{
+		var data = objData["iter"];
+		this.setIter(name, data);
+	}
+	if (objData["onclick"] != undefined)
+	{
+		var data = objData["onclick"];
+		this.setOnClick(name, data);
+	}			
 }
 
 ObjectsFactory.prototype.refId = function(name)
 {
-    var refdata = new ObjectsFactory_RefId();
-    
-    var i = name.indexOf('.'); 
-    if ( i > 0)
-    {
-        
-        refdata.name = name.substr(0, i);
-        var refid = name.substr(i+1, name.length);
-        refdata.id = parseInt(refid);
-    }else
+    var refdata = new GameonModel_RefId();
+    var tok =  name.split(".");
+	var count = tok.length;
+	if (count == 2)
+	{
+		refdata.name = tok[0];
+		refdata.id = parseInt(tok[1]);
+	}else
+	if (count == 3)
+	{
+		refdata.name = tok[0];
+		refdata.alias = tok[2];
+		refdata.id = -1;
+	}
+	else
     {
         refdata.name = name;
         refdata.id = 0;
@@ -305,7 +328,32 @@ ObjectsFactory.prototype.getRef = function(name)
     }
     
     var model = item.mModel;
-    var ref = model.getRef(refid.id , 0);
+    var ref = model.getRefById(refid , 0);
     return ref;
     
 }    
+
+ObjectsFactory.prototype.setIter = function(name, data) 
+{
+	var refid = this.refId(name);
+	var item = this.mItems[refid.name];
+	if (item == undefined)
+	{
+		return;
+	}
+	var model = item.mModel;
+	var num = parseInt(data);
+	model.setupIter(num);
+}
+
+ObjectsFactory.prototype.setOnClick = function(name, data) 
+{
+	var refid = this.refId(name);
+	var item = this.mItems[refid.name];
+	if (item == undefined)
+	{
+		return;
+	}
+	var model = item.mModel;
+	model.mOnClick = data;
+}

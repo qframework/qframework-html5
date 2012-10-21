@@ -138,7 +138,7 @@ ItemFactory.prototype.getFromTemplate = function(strType, strData, strColor)
 	}
 	
 		
-	var model = new GameonModel(template , this.mApp);
+	var model = new GameonModel(template , this.mApp , undefined);
 	if (template == "cube")
 	{
 		var model = this.createFromType(GameonModelData_Type.CUBE, color , textid , grid);
@@ -267,7 +267,7 @@ ItemFactory.prototype.setSubmodels = function(strType, strData) {
 
 ItemFactory.prototype.createFromType = function(template, color, texture , grid) 
 {
-    var model = new GameonModel("template" , this.mApp);
+    var model = new GameonModel("template" , this.mApp, undefined);
     this.addModelFromType(model, template, color, texture, grid);
     return model;
 }
@@ -333,7 +333,7 @@ ItemFactory.prototype.initModels = function(response)
 ItemFactory.prototype.processObject = function( objData) {
 	var name = objData["name"];
 	var template = objData["template"];
-	var color= null;
+	var color= undefined;
 	if (objData["color"] != undefined)
 	{
 		color= objData["color"];
@@ -365,7 +365,7 @@ ItemFactory.prototype.processObject = function( objData) {
 
 ItemFactory.prototype.newEmpty = function(name) 
 {
-    var model = new GameonModel(name , this.mApp);
+    var model = new GameonModel(name , this.mApp, undefined);
     model.mIsModel = true;
     if (model != undefined)
     {
@@ -432,6 +432,15 @@ ItemFactory.prototype.addShape = function(name, type, transform, colors, uvbound
     {
         model.addPlane(mat, cols, uvb);
     }
+	else if (type == "cylinder")
+	{
+		model.createModelFromData2(GameonModelData.modelCyl, mat, uvb, cols);
+	}
+	else if (type == "cube")
+	{
+		model.createModelFromData2(GameonModelData.modelCube, mat, uvb, cols);
+	}		
+	
     /*
     else if (type.equals("cube"))
     {
@@ -493,3 +502,85 @@ ItemFactory.prototype.addShapeFromData = function(name, data, transform, uvbound
     var inputdata = ServerkoParse.parseFloatVector(data);
     model.createModelFromData(inputdata, mat, uvb);
 }
+
+ItemFactory.prototype.createModelFromFile = function(gl, modelname, fname)
+{
+	var model = this.mModels[modelname];
+	if (model != undefined) {
+		return;
+	}
+	
+	model = new GameonModel(modelname , this.mApp,undefined);
+	
+	var location = "";
+	location += fname;
+	var vertices = new Array();
+	var textvertices = new Array();
+
+	var folder = "";
+	if (fname.indexOf("/") != -1)
+	{
+		folder = fname.substring(0, fname.indexOf("/")+1);
+	}
+	
+	var objstr = this.mApp.getStringFromFile(location);
+	
+	
+	var tok = objstr.split("\n");
+	for (var a =0; a < tok.length; a++)
+	{
+		var line = tok[a];
+		line = line.replace("\r", "");
+		if (line.indexOf("#") == 0)
+		{
+			continue;
+		}
+		if (line.indexOf("v ") == 0)
+		{
+			vertices.push(this.parseVertices(line.substring(2)));
+		}else
+		if (line.indexOf("vt ") == 0)
+		{
+			textvertices.push(this.parseTextureVertices(line.substring(3)));
+		}else
+		if (line.indexOf("vn ") == 0)
+		{
+			continue;
+		}else					
+		if (line.indexOf("vp ") == 0)
+		{
+			continue;
+		}else
+		if (line.indexOf("f ") == 0)
+		{
+			model.addShapeFromString(vertices, textvertices, line.substring(2));
+		}else
+		if (line.indexOf("mtllib ") == 0)
+		{
+			this.mApp.textures().loadMaterial(gl, folder, line.substring(7));
+		}else
+		if (line.indexOf("usemtl ") == 0)
+		{
+			model.useMaterial(line.substring(7));
+		}
+	}
+	// TODO multiple material textures
+	// TODO normals and much more
+	model.normalize();
+	model.invert(false,true,false);
+	this.mModels[modelname] = model;
+
+}
+
+ItemFactory.prototype.parseVertices = function(data) 
+{
+	data = data.trim();
+	return ServerkoParse.parseFloatArray2(data);
+}
+
+ItemFactory.prototype.parseTextureVertices = function(data) 
+{
+	data = data.trim();
+	return ServerkoParse.parseFloatArray2(data);
+}
+

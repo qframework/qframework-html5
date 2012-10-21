@@ -107,7 +107,7 @@ function LayoutAreaText(subtype , app)
 	this.mHasScrollV = false;
 	this.mScollerAnim = undefined;
 	this.mActiveItems = 1;
-	
+	this.mBorderWidth= 0.03;
 }
 
 LayoutAreaText.prototype = new LayoutArea();
@@ -255,7 +255,7 @@ LayoutAreaText.prototype.initButton = function()
 	var ratio = this.mBounds[0] / this.mBounds[1];
 	
 	var  bw = 1 - (11.0-this.mModifier) / 10.0;
-	var  w = 1.0 - bw;
+	var  w = 1.0 - bw * 1.2;
 	
 	var x = width * (0.5-w/2); 
 	var x1 = width * (-0.5 + bw/2);

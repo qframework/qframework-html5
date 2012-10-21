@@ -84,6 +84,18 @@ GLShape.prototype.addVertex = function(x, y, z, tu, tv, color)
 	return vertex;
 }
 
+GLShape.prototype.addVertexNoIndex = function(x, y, z, tu, tv, color) 
+{
+	
+	var vertex = this.mWorld.addVertex(x, y, z, tu, tv);
+	vertex.red= color.red;
+	vertex.green= color.green;
+	vertex.blue= color.blue;
+	vertex.alpha= color.alpha;
+	this.mVertexList.push(vertex);
+	return vertex;
+}
+
 GLShape.prototype.addVertexColor = function(x, y, z, tu, tv, color) 
 {
     var red = color[1];

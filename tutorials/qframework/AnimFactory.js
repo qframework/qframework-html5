@@ -94,7 +94,12 @@ AnimFactory.prototype.processAnimFrame = function(objData , frame)
 
 AnimFactory.prototype.buildObjectAdata = function(ref, atype, delay, repeat, data, callback)
 {
-	var adata = ref.getAnimData(this.mApp);
+	var adata = ref.getAnimData(this.mApp);    	
+	if (ref.animating())
+	{
+		return;
+	}
+
 	// fill anim data!
 	
 	// for object destination is stored in data
@@ -264,10 +269,19 @@ AnimFactory.prototype.animObject = function(animid,objectid,data, delaydata,call
 
 AnimFactory.prototype.animRef = function(animid, start, end,delaydata)
 {
+	if (animid == "none")
+	{
+		end.cancelAnimation();
+		return;
+	}
 	if (this.mAnimations[animid] == undefined)
 	{
 		return;
 	}
+	if (end.animating())
+	{
+		return;
+	}    		
 	
 	var intdata = [0,0];
 	var atype = this.mAnimations[animid];
@@ -284,13 +298,16 @@ AnimFactory.prototype.animRef = function(animid, start, end,delaydata)
 	end.activateAnim();
 }
 
-AnimFactory.prototype.createAnim = function(start,end, def, delay , steps, owner, repeat, hide) {
+AnimFactory.prototype.createAnim = function(start,end, def, delay , steps, owner, repeat, hide, savebackup) {
 	
 	var adata = def.getAnimData(this.mApp);
 	var atype = this.mAnimations["transform"];
 	adata.setDelay(delay, repeat);
 	adata.setup2(atype,start,end);
-	adata.saveBackup(def , hide);
+	if (savebackup == true)
+	{
+		adata.saveBackup(def , hide);
+	}
 	def.activateAnim();
 	
 }

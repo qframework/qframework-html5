@@ -41,13 +41,13 @@ function GameonWorld(app)
 	GameonWorld.mWorld = this;	
 	
 	this.addDomain("world",0, true);
-	this.addDomain("hud",MAX_INTEGER, true);	
+	this.addDomain("hud",10000, true);	
 }
 
 
 GameonWorld.prototype.initSplash = function(gl , name)
 {
-	var model = new GameonModel("splash", this.mApp);
+	var model = new GameonModel("splash", this.mApp , undefined);
 	model.createPlane(-1.5, -1.0, 0.0, 1.5, 1.0, 0.0,this.mApp.colors().white , undefined);
 	
 	this.mApp.textures().newTexture(gl, "q_splash", name, true);
@@ -138,7 +138,7 @@ GameonWorld.prototype.addModels = function(gl)
 
 }
 
-GameonWorld.prototype.draw = function(gl) {
+GameonWorld.prototype.draw = function(gl , delay) {
 	if (this.mLockedDraw) return;
 	if (this.mAmbientLightChanged)
 	{
@@ -152,7 +152,7 @@ GameonWorld.prototype.draw = function(gl) {
 	for (var a =0 ; a< this.mDomains.length ; a++)
 	{
 		var domain = this.mDomains[a];
-		domain.draw(gl);
+		domain.draw(gl , delay);
 	}	
 
 }
@@ -435,5 +435,52 @@ GameonWorld.prototype.domainHide = function(name)
 	{
 		domain.hide();
 	}		
+}
+
+GameonWorld.prototype.onTouchModel = function(x, y, click) 
+{
+	var data= undefined;
+	for (var a= this.mDomains.length-1 ; a>=0;  a--)
+	{
+		var domain = this.mDomains[a];
+		data= domain.onTouchModel(x,y, click, true);
+		if (data != undefined)
+		{
+			return data;
+		}
+	}
+	return null;
+}
+
+GameonWorld.prototype.domainPan = function(name, mode, scrollers,coords) 
+{
+	var domain = this.getDomainByName(name);
+	if (domain != undefined)
+	{
+		domain.pan(mode, scrollers,coords);
+	}
+	
+}
+
+GameonWorld.prototype.panDomain = function(x, y) 
+{
+	for (var a= this.mDomains.length-1 ; a>=0;  a--)
+	{
+		var domain = this.mDomains[a];
+		if (domain.onPan(x,y))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+GameonWorld.prototype.resetDomainPan = function() 
+{
+	for (var a= this.mDomains.length-1 ; a>=0;  a--)
+	{
+		var domain = this.mDomains[a];
+		domain.resetPan();
+	}
 }
 

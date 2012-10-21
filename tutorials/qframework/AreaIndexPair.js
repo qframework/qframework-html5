@@ -17,6 +17,7 @@
 function AreaIndexPair()
 {
 	this.mArea = "";
+	this.mAlias = undefined;
 	this.mIndex = 0;
 	this.mOnclick = "";
 	this.mOnFocusLost = "";
